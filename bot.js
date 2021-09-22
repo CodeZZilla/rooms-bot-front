@@ -74,6 +74,31 @@ bot.onText(/\/start/, (msg) => {
 
 })
 
+bot.onText(/Налаштування/, (msg) => {
+    let chat = msg.hasOwnProperty('chat') ? msg.chat.id : msg.from.id;
+
+    const opts = {
+        reply_to_message_id: msg.message_id,
+        parse_mode: "Markdown",
+        reply_markup: JSON.stringify({
+            resize_keyboard: true,
+            keyboard: [
+                [{text: 'Оновити фільтри ⚙️'}, {
+                    text: 'Інформація про підписку ℹ️'
+                }, {
+                    text: 'Головне меню ◀️'
+                }],
+                [{text: 'Хочу пожалітися 😡', callback_data: 'settings'}]
+            ]
+        })
+    };
+    bot.sendMessage(chat, 'Оберіть пункт меню', opts);
+})
+
+bot.onText(/Головне меню/, (msg) => {
+    sendMainMenu(msg)
+});
+
 function getUserByTelegramID(msg) {
     let chat;
     if (!msg.chat && !msg.from) {
@@ -190,6 +215,38 @@ function typeOfApartments(reply,chat,msg){
     }
 }
 
+function sendMainMenu(msg) {
+    let chat = msg.hasOwnProperty('chat') ? msg.chat.id : msg.from.id;
+    const opts = {
+        reply_to_message_id: msg.message_id,
+        parse_mode: "Markdown",
+        reply_markup: JSON.stringify({
+            resize_keyboard: true,
+            keyboard: [
+                [{text: 'Свіжі квартири 🏢', callback_data: 'getFreshApartments'}, {
+                    text: 'Збережені ❤️',
+                    callback_data: 'liked'
+                }],
+                [{text: 'Налаштування ⚙', callback_data: 'settings'}, {
+                    text: 'Придбати персональний підбір 🧞‍♂️',
+                    callback_data: 'settings'
+                }]
+            ]
+        })
+    };
+
+    if (chat === MANAGER_CHAT) {
+        opts.reply_markup = JSON.stringify({
+            resize_keyboard: true,
+            keyboard: [
+                [{text: 'Меню менеджера 😎'}],
+                [{text: 'Конфігурація бота '}]
+            ]
+        })
+    }
+    bot.sendMessage(chat, 'Оберіть пункт меню', opts);
+}
+
 function setCityForUser(answer, chat, msg) {
     if (answer.includes("first")) {
         api.request({
@@ -232,4 +289,15 @@ bot.on('callback_query', (msg) => {
     }
 
 
+})
+
+
+bot.on('callback_query', (msg) => {
+    let chat = msg.hasOwnProperty('chat') ? msg.chat.id : msg.from.id;
+    let msgInfo = getMainDataFromMsg(msg);
+    let reply = msg.data;
+
+    switch (reply) {
+
+    }
 })
