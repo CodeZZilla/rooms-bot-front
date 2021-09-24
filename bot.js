@@ -5,9 +5,11 @@ const passgen = require('passgen');
 const bot = new TelegramBot(token_tg, {polling: true});
 const MANAGER_CHAT = -1001339183887;
 const cities = require("./api/cities-api")
-
 require('./test-connection-db');
 
+//Тут у нас тестовые темы вместо API
+//apiTest -- тут JSON-файл записан в масив объетов, это по-сути готовый ответ с API
+let apiTest = require('./api-request.json')
 const api = require('./api/client-api')
 
 const {
@@ -73,6 +75,140 @@ bot.onText(/\/start/, (msg) => {
     }
 
 })
+
+bot.onText(/Налаштування/, (msg) => {
+    let chat = msg.hasOwnProperty('chat') ? msg.chat.id : msg.from.id;
+
+    const opts = {
+        reply_to_message_id: msg.message_id,
+        parse_mode: "Markdown",
+        reply_markup: JSON.stringify({
+            resize_keyboard: true,
+            keyboard: [
+                    [{text: 'Оновити фільтри ⚙️'}, {
+                    text: 'Інформація про підписку ℹ️'
+                }, {
+                    text: 'Головне меню ◀️'
+                }],
+                [{text: 'Хочу пожалітися 😡', callback_data: 'settings'}]
+            ]
+        })
+    };
+    bot.sendMessage(chat, 'Оберіть пункт меню', opts);
+})
+
+bot.onText(/Головне меню/, (msg) => {
+    sendMainMenu(msg)
+});
+
+//TODO Fresh apartments
+bot.onText(/Свіжі квартири/, (msg) => {
+    let msgInfo = getMainDataFromMsg(msg);
+    console.log(apiTest)
+
+
+    // getUserByTelegramID(msg).then(async user => {
+    //     if (user.subscription.name.includes("Тест")) {
+    //         setTimeout( () => {
+    //                 bot.sendMessage(user.telegram_id, "Дякую, що ти з нами! РУМС БОТ допоможе тобі знайти квартиру без комісії!" + "\n" +
+    //                     "Ми взагалі продаємо підписку на наш БОТ щоб ти міг отримувати більше квартир. " +
+    //                     "Але зараз ми даємо тобі \n" +
+    //                     "1 ТЕСТОВИЙ ДЕНЬ щоб познайомитись з нашим сервісом!\nПід час тесту - ти можеш отримувати лише по 10 квартир на день" +
+    //                     "\n" +
+    //                     "Хочеш отримати платну підписку з більшою кількістю об'єктів? Придбай тут https://roomsua.me/#/tarrifs")
+    //             }
+    //             ,5000)
+    //     }
+    //     if (user.messaging_history) {
+    //         if (user.messaging_history.todayCompilation) {
+    //             if (user.messaging_history.todayCompilation.length > 0) {
+    //                 if (user.messaging_history.lastViewed === "none") {
+    //                     sendApartment(user, user.messaging_history.todayCompilation[0])
+    //                     user.messaging_history.lastViewed = user.messaging_history.todayCompilation[0];
+    //                     api.request({
+    //                         "url": "users",
+    //                         "method": "PUT",
+    //                         "id": user.id,
+    //                         body: {messaging_history: user.messaging_history}
+    //                     })
+    //                 } else {
+    //                     sendApartment(user, user.messaging_history.lastViewed)
+    //                 }
+    //             } else {
+    //                 await getFreshApartmentsByUser(user, user.subscription.apartments_amount, 0, []).then(apartments => {
+    //                     if (apartments.length > 0) {
+    //                         user.messaging_history.todayCompilation = apartments.map(apart => apart.id);
+    //                         user.messaging_history.viewed = user.messaging_history.viewed.concat(user.messaging_history.todayCompilation);
+    //                         user.messaging_history.lastViewed = user.messaging_history.todayCompilation[0];
+    //                         user.days_of_subscription -= 1;
+    //                         if (user.subscription.name !== "Вічна підписка") {
+    //                             api.request({
+    //                                 "url": "users",
+    //                                 "method": "PUT",
+    //                                 "id": user.id,
+    //                                 body: {messaging_history: user.messaging_history}
+    //                             })
+    //                         } else {
+    //                             api.request({
+    //                                 "url": "users",
+    //                                 "method": "PUT",
+    //                                 "id": user.id,
+    //                                 body: {
+    //                                     messaging_history: user.messaging_history,
+    //                                     days_of_subscription: user.days_of_subscription
+    //                                 }
+    //                             })
+    //                         }
+    //                         try {
+    //                             sendApartment(user, user.messaging_history.todayCompilation[0])
+    //                         } catch (e) {
+    //
+    //                         }
+    //                         try {
+    //                             createTelegraphPage(apartments.slice(0, 10).map(apartment => {
+    //                                 return createApartmentsPartTelegraph(apartment)
+    //                             }), user).then(compilation => {
+    //                                 console.log(compilation);
+    //                                 bot.sendMessage(user.telegram_id, `Ми тут для Тебе дещо приготували! [Клац 😏](${compilation.url})`, {parse_mode: "Markdown"})
+    //                             })
+    //                         } catch (e) {
+    //
+    //                         }
+    //                     } else {
+    //                         console.log("Не знайдено квартири по фільтрам")
+    //                         bot.sendMessage(user.telegram_id, "На жаль зараз відсутні нові об'єкти по твоїм фільтрам - але не сумуй, ти можеш змінити параметри пошуку, та спробувати ще раз!\nПридбай персональний підбір, і це пришвидшить пошук у рази! Деталі за посиланням https://roomsua.me/#/personal")
+    //                     }
+    //                 })
+    //
+    //             }
+    //
+    //         }
+    //     }
+    //
+    // })
+    sendMainMenu(msg)
+})
+
+//TODO Refresh filters
+bot.onText(/Оновити фільтри/, (msg) => {
+    let msgInfo = getMainDataFromMsg(msg);
+
+    getUserByTelegramID(msg).then(user => {
+        bot.sendMessage(msgInfo.chat, createFiltersMessage(user), {parse_mode: "Markdown"})
+    })
+
+    api.request({
+        "url": "cities", "method": "GET"
+    }).then(cities => {
+        setTimeout(() => {
+            bot.sendMessage(msgInfo.chat, "Обери своє місто!", createKeyboardOpts(cities.map(city => {
+                return {text: city.name, callback_data: "set_city_first:" + city.id}
+            }), 3))
+        }, 2000)
+
+    })
+})
+
 
 function getUserByTelegramID(msg) {
     let chat;
@@ -190,6 +326,38 @@ function typeOfApartments(reply,chat,msg){
     }
 }
 
+function sendMainMenu(msg) {
+    let chat = msg.hasOwnProperty('chat') ? msg.chat.id : msg.from.id;
+    const opts = {
+        reply_to_message_id: msg.message_id,
+        parse_mode: "Markdown",
+        reply_markup: JSON.stringify({
+            resize_keyboard: true,
+            keyboard: [
+                [{text: 'Свіжі квартири 🏢', callback_data: 'getFreshApartments'}, {
+                    text: 'Збережені ❤️',
+                    callback_data: 'liked'
+                }],
+                [{text: 'Налаштування ⚙', callback_data: 'settings'}, {
+                    text: 'Придбати персональний підбір 🧞‍♂️',
+                    callback_data: 'settings'
+                }]
+            ]
+        })
+    };
+
+    if (chat === MANAGER_CHAT) {
+        opts.reply_markup = JSON.stringify({
+            resize_keyboard: true,
+            keyboard: [
+                [{text: 'Меню менеджера 😎'}],
+                [{text: 'Конфігурація бота '}]
+            ]
+        })
+    }
+    bot.sendMessage(chat, 'Оберіть пункт меню', opts);
+}
+
 function setCityForUser(answer, chat, msg) {
     if (answer.includes("first")) {
         api.request({
@@ -223,7 +391,7 @@ bot.on('callback_query', (msg) => {
                         "url": "users",
                         "method": "PUT",
                         "id": user.id,
-                        body: {preferences: {city: answer.split(":")[1]}}
+                        body: {preferences: {city: reply.split(":")[1]}}
                     })
                 })
             }
@@ -232,4 +400,15 @@ bot.on('callback_query', (msg) => {
     }
 
 
+})
+
+
+bot.on('callback_query', (msg) => {
+    let chat = msg.hasOwnProperty('chat') ? msg.chat.id : msg.from.id;
+    let msgInfo = getMainDataFromMsg(msg);
+    let reply = msg.data;
+
+    switch (reply) {
+
+    }
 })
