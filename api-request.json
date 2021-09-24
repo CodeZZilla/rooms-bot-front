@@ -1,0 +1,148 @@
+[
+  {
+    "internalId": 1416897,
+    "creationDate": "2021-09-19",
+    "lastUpdateDate": "2021-09-19",
+    "type": "аренда",
+    "propertyType": "жилая",
+    "category": "квартира",
+    "rooms": 1,
+    "area": {
+      "value": "22",
+      "unit": "кв.м"
+    },
+    "floor": 5,
+    "floorsTotal": 9,
+    "price": {
+      "value": 8500,
+      "currency": "UAH"
+    },
+    "location": {
+      "country": "Украина",
+      "region": "Киевская область",
+      "locationName": "Киев",
+      "subLocationName": "Подольский",
+      "nonAdminSubLocality": "Виноградарь",
+      "address": "Светлицкого ул.",
+      "house": "",
+      "metro": {
+        "name": "",
+        "distance": ""
+      }
+    },
+    "url": "https://www.olx.ua/d/obyavlenie/zdamo-1k-kvartiru-na-svtlitskogo-IDMMbDa.html",
+    "salesAgent": {
+      "phone": "0931800052"
+    },
+    "description": "Дата объявления: 2021-09-19, 1 к, Киев, Виноградарь, ул. Светлицкого. Здамо 1к квартиру на Світлицького Здамо 1-кімнатну квартиру на довгострокову оренду, на виноградарі на Світлицького. Гостинка. Квартира 22м2. з відкритим затишним балконом. Оснащєна меблями, холодильником, мікрохвильовкою, варильною поверхнею, кондиціонер, роутер. При необхідності можемо підключити WIFI (Тріолан). Поруч декілька супермаркетів, кінцеві зупинки транспорту на лівий берег, центр, поділ, нивки, оболонь Можна з котами, при умові зобов\"язання прибирати за ними всі руйнування. Квартира після дезинсекції та спеціального генерального прибирання. Вже готова до заселення. Оплата: 8500грн,+ К/У + 8500грн залог Є лічильник на воду та електроенергію. Заключаємо договір. 8 500 грн. Киевская область, Киев, Подольский Алексей",
+    "images": [
+      "https://c-img.citybase.com.ua/Kyiv/1416897/photo_1.jpg",
+      "https://c-img.citybase.com.ua/Kyiv/1416897/photo_2.jpg",
+      "https://c-img.citybase.com.ua/Kyiv/1416897/photo_3.jpg",
+      "https://c-img.citybase.com.ua/Kyiv/1416897/photo_4.jpg",
+      "https://c-img.citybase.com.ua/Kyiv/1416897/photo_5.jpg",
+      "https://c-img.citybase.com.ua/Kyiv/1416897/photo_6.jpg",
+      "https://c-img.citybase.com.ua/Kyiv/1416897/photo_7.jpg",
+      "https://c-img.citybase.com.ua/Kyiv/1416897/photo_8.jpg",
+      "https://c-img.citybase.com.ua/Kyiv/1416897/photo_9.jpg",
+      "https://c-img.citybase.com.ua/Kyiv/1416897/photo_10.jpg",
+      "https://c-img.citybase.com.ua/Kyiv/1416897/photo_11.jpg"
+    ],
+    "isFree": false,
+    "id": "614c8619d3bee0657d81a0fc"
+  },
+  {
+    "internalId": 1416794,
+    "creationDate": "2021-09-19",
+    "lastUpdateDate": "2021-09-22",
+    "type": "аренда",
+    "propertyType": "жилая",
+    "category": "квартира",
+    "rooms": 1,
+    "area": {
+      "value": "38",
+      "unit": "кв.м"
+    },
+    "floor": 2,
+    "floorsTotal": 9,
+    "price": {
+      "value": 7999,
+      "currency": "UAH"
+    },
+    "location": {
+      "country": "Украина",
+      "region": "Киевская область",
+      "locationName": "Киев",
+      "subLocationName": "Соломенский",
+      "nonAdminSubLocality": "Соломенка",
+      "address": "Волгоградская ул.",
+      "house": "13",
+      "metro": {
+        "name": "",
+        "distance": ""
+      }
+    },
+    "url": "https://besplatka.ua/obyavlenie/cdam-v-arendu-1-komn-kvartiru-dolgostrochno-202320",
+    "salesAgent": {
+      "phone": "0930587103"
+    },
+    "description": "Дата объявления: 2021-09-19, обновлено: 2021-09-22, 1 к, Киев, Соломенка, ул. Волгоградская 13. cдам в аренду 1 комн квартиру долгострочно сдам от хозяина в долгосрочную аренду 1комн квартиру в соломенском районе на ул волгоградская 13(огородняя) 2й этаж 9эт дома тихое место возле красивейшего парка окна выходят во двор оплата по месячно+ком услуги и залоговая сумма (месячная плата) желательно пару без детей или 1 парня или 1 девушку работающих 7 999 грн. від власника",
+    "images": [],
+    "isFree": false,
+    "id": "614c8619d3bee0657d81a0ff"
+  },
+  {
+    "internalId": 1416854,
+    "creationDate": "2021-09-19",
+    "lastUpdateDate": "2021-09-19",
+    "type": "аренда",
+    "propertyType": "жилая",
+    "category": "квартира",
+    "rooms": 1,
+    "area": {
+      "value": "31",
+      "unit": "кв.м"
+    },
+    "floor": 5,
+    "floorsTotal": 25,
+    "price": {
+      "value": 15500,
+      "currency": "UAH"
+    },
+    "location": {
+      "country": "Украина",
+      "region": "Киевская область",
+      "locationName": "Киев",
+      "subLocationName": "Шевченковский",
+      "nonAdminSubLocality": "Лукьяновка",
+      "address": "Смородинский спуск",
+      "house": "",
+      "metro": {
+        "name": "",
+        "distance": ""
+      }
+    },
+    "url": "https://www.olx.ua/d/obyavlenie/pervaya-sdacha-uyutnaya-studiya-v-zhk-henesi-m-lukyanovskaya-IDMM7Gc.html",
+    "salesAgent": {
+      "phone": "0506295455"
+    },
+    "description": "Дата объявления: 2021-09-19, 1 к, Киев, Лукьяновка, Смородинский спуск. Первая сдача ! Уютная студия в ЖК Henesi м. Лукьяновская Предлагается для долгосрочной аренды уютная студия в ЖК премиум-класса . Высота потолков 3м, скоростные лифты Schindler, лаунж терраса на крыше, подземный паркинг в доме. Также рядом с домом есть парковка. Только после ремонта, первая сдача. При ремонте использовались качественные экологически чистые материалы. Квартира укомплектована необходимой бытовой техникой высокого качества. ЖК расположен в тихой части Шевченковского района. Рядом Смородинский парк, Сильпо, Новус, ТЦ Променада, рядом автобусные, троллейбусные линии, до м. Лукьянсковская 20 мин. 15 500 грн. Киевская область, Киев, Шевченковский Дмитрий",
+    "images": [
+      "https://c-img.citybase.com.ua/Kyiv/1416854/photo_1.jpg",
+      "https://c-img.citybase.com.ua/Kyiv/1416854/photo_2.jpg",
+      "https://c-img.citybase.com.ua/Kyiv/1416854/photo_3.jpg",
+      "https://c-img.citybase.com.ua/Kyiv/1416854/photo_4.jpg",
+      "https://c-img.citybase.com.ua/Kyiv/1416854/photo_5.jpg",
+      "https://c-img.citybase.com.ua/Kyiv/1416854/photo_6.jpg",
+      "https://c-img.citybase.com.ua/Kyiv/1416854/photo_7.jpg",
+      "https://c-img.citybase.com.ua/Kyiv/1416854/photo_8.jpg",
+      "https://c-img.citybase.com.ua/Kyiv/1416854/photo_9.jpg",
+      "https://c-img.citybase.com.ua/Kyiv/1416854/photo_10.jpg",
+      "https://c-img.citybase.com.ua/Kyiv/1416854/photo_11.jpg",
+      "https://c-img.citybase.com.ua/Kyiv/1416854/photo_12.jpg",
+      "https://c-img.citybase.com.ua/Kyiv/1416854/photo_13.jpg"
+    ],
+    "isFree": false,
+    "id": "614c8619d3bee0657d81a100"
+  }
+]
