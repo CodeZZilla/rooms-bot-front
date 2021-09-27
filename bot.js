@@ -7,6 +7,10 @@ const MANAGER_CHAT = -1001339183887;
 const cities = require("./api/cities-api")
 require('./test-connection-db');
 
+
+const apiTests = require('./api/Api');
+let ap = new apiTests()
+ap.request().then(r => console.log(r));
 //Тут у нас тестовые темы вместо API
 //apiTest -- тут JSON-файл записан в масив объетов, это по-сути готовый ответ с API
 let apiTest = require('./api-request.json')
