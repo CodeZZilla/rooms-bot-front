@@ -10,7 +10,8 @@ require('./test-connection-db');
 
 const apiTests = require('./api/Api');
 let ap = new apiTests()
-ap.request().then(r => console.log(r));
+// ap.request().then(r => console.log(r));
+
 //Тут у нас тестовые темы вместо API
 //apiTest -- тут JSON-файл записан в масив объетов, это по-сути готовый ответ с API
 let apiTest = require('./api-request.json')
@@ -21,7 +22,7 @@ const {
     createApartmentsMessage
 } = require("./utils/TelegramUtils")
 
-api.deleteOne({chat: "447833870"}).then(res=>{
+api.deleteOne({chat: "447833870"}).then(res => {
     console.log(res)
 })
 
@@ -224,12 +225,13 @@ function getUserByTelegramID(msg) {
     } else {
         chat = msg.hasOwnProperty('chat') ? msg.chat.id : msg.from.id;
     }
-    return api.find({chat: chat}).then(users => {
-        if (users.length > 0) {
-            console.log(users)
-            return users[0]
+    return ap.request(
+        {
+            "url": "user",
+            "filters": {"idTelegram": chat},
+            method: "GET"
         }
-    })/*.then(user => {
+    )/*.then(user => {
         if (user && user.days_of_subscription <= 0) {
             api.request({url: "subscriptions", method: "GET", filters: {"_sort": "price:ASC"}}).then(plans => {
                 if (plans) {
@@ -270,6 +272,15 @@ function processReturnedUser(msgInfo) {
 //function processRegisterUser()
 async function registerUser(msgInfo) {
     let apiU = new api(msgInfo)
+    await ap.request({
+        "url": "user/add", "method": "POST", body: {
+            // subscription: "5f44102d479cca001db181d7",
+            "nickname": msgInfo.chat,
+            "name": msgInfo.name,
+            "idTelegram": msgInfo.chat,
+            "lastName": msgInfo.last_name
+        }
+    })
     await apiU.save().then(res => {
         console.log("Успішно зареєстровано!")
     });
@@ -417,7 +428,8 @@ function prepareRoomsOrApartment(msg) {
         reply_markup: JSON.stringify({
             resize_keyboard: true,
             inline_keyboard: [
-                [{text: 'Кімнати', callback_data: 'rooms'}, {text: 'Квартири', callback_data: 'apartments'}]]})
+                [{text: 'Кімнати', callback_data: 'rooms'}, {text: 'Квартири', callback_data: 'apartments'}]]
+        })
     };
     opts.reply_to_message_id = msg.message_id
     return opts;
@@ -431,13 +443,15 @@ bot.on('callback_query', (msg) => {
     switch (reply) {
         case "rooms": {
             selectRoomAsFilter(msg, answer, chat)
-        }break;
+        }
+            break;
         case "apartments": {
             selectApartmentAsFilter(msg, answer, chat)
-        }break;
+        }
+            break;
         default:
             if (reply.includes("set_city")) {
-                typeOfApartments(reply,chat,msg)
+                typeOfApartments(reply, chat, msg)
                 /*getUserByTelegramID(msg).then(user => {
                     /!*return api.request({
                         "url": "users",
@@ -446,7 +460,7 @@ bot.on('callback_query', (msg) => {
                         body: {preferences: {city: reply.split(":")[1]}}
                     })*!/
                 })*/
-            } else if (reply.includes("rooms")){
+            } else if (reply.includes("rooms")) {
                 //TODO Put to user room
                 /*getUserByTelegramID(msg).then(user => {
                     /!*return api.request({
@@ -456,7 +470,7 @@ bot.on('callback_query', (msg) => {
                         body: {preferences: {city: reply.split(":")[1]}}
                     })*!/
                 })*/
-            }else if (reply.includes("apartments")){
+            } else if (reply.includes("apartments")) {
                 //TODO Put to user apart
                 /*getUserByTelegramID(msg).then(user => {
                     /!*return api.request({
