@@ -309,6 +309,26 @@ function sendGreetingMessage(msgInfo) {
     }, 1000)
 }
 
+function sendPriceMessage(msgInfo) {
+    setTimeout(() => {
+        bot.sendMessage(msgInfo.chat, `Обери ціну\/n Від скіккох тисяч повина бути ціна`).then(() => {
+            cities.find().then(cities => {
+                console.log(cities)
+                bot.sendMessage(msgInfo.chat, "Обери місто!", createKeyboardOpts(cities.map(city => {
+                    return {text: city.name, callback_data: "set_city_first:" + city.id}
+                }), 3))
+            })
+            //     api.request({
+            //         "url": "cities", "method": "GET"
+            //     }).then(cities => {
+            //         bot.sendMessage(msgInfo.chat, "Обери своє місто!", createKeyboardOpts(cities.map(city => {
+            //             return {text: city.name, callback_data: "set_city_first:" + city.id}
+            //         }), 3))
+            //     })
+        })
+    }, 1000)
+}
+
 function createKeyboardOpts(list, elementsPerSubArray, args) {
     let list1 = listToMatrix(list, elementsPerSubArray);
     if (args) {
@@ -339,6 +359,21 @@ function listToMatrix(list, elementsPerSubArray) {
 
 function typeOfApartments(reply, chat, msg) {
     if (reply.includes("type")) {
+        /*api.request({
+            "url": "regions", "method": "GET", "filters": {"city.id": answer.split(":")[1]}
+        }).then(regions => {
+            var keyboard = createKeyboardOpts(regions.map(region => {
+                return {
+                    text: region.name,
+                    callback_data: "rg_first:" + region.id
+                }
+            }), 1, [{text: "Зберегти райони 💾", callback_data: "save_regions_first"}]);
+            if (regions.length > 0) {
+                bot.sendMessage(chat, "Обери свій район! (Можна декілька)", keyboard)
+            } else {
+                sendMainMenu(msg)
+            }
+        })*/
         getUserByTelegramID(msg).then(user => {
             const opts = prepareRoomsOrApartment(msg);
             bot.sendMessage(chat, "Що шукаєте?", opts)
@@ -435,6 +470,135 @@ function prepareRoomsOrApartment(msg) {
     return opts;
 }
 
+// TODO Реалізувати PUT для кімнат
+/*function selectRoomAsFilter(msg, answer, chat) {
+    const lowPriceOpts = prepareLowPriceOpts(msg);
+    getUserByTelegramID(msg).then(user => {
+        user.preferences.rooms = true;
+        api.request({
+            "url": "users",
+            "method": "PUT",
+            "id": user.id,
+            body: {preferences: user.preferences}
+        })
+        bot.sendMessage(chat, "Обери нижню ціну", lowPriceOpts)
+    })
+}*/
+
+function selectApartmentAsFilter(msg, reply, chat) {
+    const roomsAmount = prepareRoomsAmount(msg);
+    /*getUserByTelegramID(msg).then(user => {
+        user.preferences.rooms = false;
+        api.request({
+            "url": "users",
+            "method": "PUT",
+            "id": user.id,
+            body: {preferences: user.preferences}
+        })
+    })*/
+    bot.sendMessage(chat, "Обери кількість кімнат, зауваж, ми шукаємо по максимальній кількості обраних тобою кімнат\nНаприклад - якщо ти обереш 1-кімнатні, ми будемо шукати лише 1-кімнатні об'єкти, але якщо ти обереш 3-кімнатні, то у пошуку будуть як одно- так і дво- та і троьхкімнатні !!!", roomsAmount)
+}
+
+const rooms = [
+    {
+        "name" : "1"
+    },
+    {
+        "name" : "2"
+    },
+    {
+        "name" : "3"
+    },
+    {
+        "name" : "4"
+    }
+]
+
+function prepareRoomsAmount(msg) {
+    const opts = createKeyboardOpts(rooms.map(room => {
+        return {
+            text: room.name,
+            callback_data: "rooms:" + room.name
+        }
+    }),2,[{text: "Зберегти 💾", callback_data: "save_amount_of_rooms"}])
+    /*const opts = {
+        parse_mode: "Markdown",
+        reply_markup: JSON.stringify({
+            resize_keyboard: true,
+            inline_keyboard: [[{text: 'Однокімнатна', callback_data: 'rooms:1'}, {
+                text: 'Двохкімнатна',
+                callback_data: 'rooms:2'
+            }],
+                [{text: 'Трьохкімнатна', callback_data: 'rooms:3'}, {
+                    text: 'Чотирьохкімнатна',
+                    callback_data: 'rooms:4'
+                }]
+            ]
+        })
+    };*/
+    opts.reply_to_message_id = msg.message_id
+    return opts;
+}
+
+function selectRoomsAmount(msg, reply, chat) {
+    getUserByTelegramID(msg).then(user => {
+        if (!user.preferences.regions.map(reg => reg.id).includes(answer.split(":")[1])) {
+            user.preferences.regions = [...user.preferences.regions.map(reg => reg.id), answer.split(":")[1]];
+            api.request({
+                "url": "users",
+                "method": "PUT",
+                "id": user.id,
+                body: {preferences: user.preferences}
+            })
+            bot.editMessageText("Обери свій район! (Можна декілька)", {
+                chat_id: chat,
+                message_id: msg.message.message_id,
+                reply_markup: JSON.stringify({
+                    inline_keyboard: msg.message.reply_markup.inline_keyboard.map(arr => {
+                        if (arr[0].callback_data.includes(answer)) {
+                            arr[0].text = "✅| " + arr[0].text
+                        }
+                        return arr;
+                    })
+                })
+            })
+        } else {
+            user.preferences.regions = [...user.preferences.regions.map(reg => reg.id).filter(id => id !== answer.split(":")[1])];
+            api.request({
+                "url": "users",
+                "method": "PUT",
+                "id": user.id,
+                body: {preferences: user.preferences}
+            })
+            bot.editMessageText("Обери свій район! (Можна декілька)", {
+                chat_id: chat,
+                message_id: msg.message.message_id,
+                reply_markup: JSON.stringify({
+                    inline_keyboard: msg.message.reply_markup.inline_keyboard.map(arr => {
+                        if (arr[0].callback_data.includes(answer)) {
+                            arr[0].text = arr[0].text.replace("✅| ", "");
+                        }
+                        return arr
+                    })
+                })
+            })
+        }
+
+    })
+    //const lowPriceOpts = prepareLowPriceOpts(msg);
+    //console.log(parseInt(reply.split(":")[1]))
+    /*getUserByTelegramID(msg).then(user => {
+        user.preferences.how_many_rooms = parseInt(answer.split(":")[1]);
+        api.request({
+            "url": "users",
+            "method": "PUT",
+            "id": user.id,
+            body: {preferences: user.preferences}
+        })*/
+        //bot.sendMessage(chat, "Обери нижню ціну"/*, lowPriceOpts*/)
+
+}
+
 bot.on('callback_query', (msg) => {
     console.log(msg)
     let chat = msg.hasOwnProperty('chat') ? msg.chat.id : msg.from.id;
@@ -442,16 +606,18 @@ bot.on('callback_query', (msg) => {
     let reply = msg.data;
     switch (reply) {
         case "rooms": {
-            selectRoomAsFilter(msg, answer, chat)
+            //selectRoomAsFilter(msg, answer, chat)
         }
             break;
         case "apartments": {
-            selectApartmentAsFilter(msg, answer, chat)
+            selectApartmentAsFilter(msg, reply, chat)
+
         }
             break;
         default:
             if (reply.includes("set_city")) {
                 typeOfApartments(reply, chat, msg)
+
                 /*getUserByTelegramID(msg).then(user => {
                     /!*return api.request({
                         "url": "users",
@@ -480,6 +646,8 @@ bot.on('callback_query', (msg) => {
                         body: {preferences: {city: reply.split(":")[1]}}
                     })*!/
                 })*/
+            } else if (reply.includes("rooms")) {
+                selectRoomsAmount(msg, reply, chat)
             }
 
 
