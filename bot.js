@@ -7,6 +7,11 @@ const MANAGER_CHAT = -1001339183887;
 const cities = require("./api/cities-api")
 require('./test-connection-db');
 
+
+const apiTests = require('./api/Api');
+let ap = new apiTests()
+// ap.request().then(r => console.log(r));
+
 //Тут у нас тестовые темы вместо API
 //apiTest -- тут JSON-файл записан в масив объетов, это по-сути готовый ответ с API
 let apiTest = require('./api-request.json')
@@ -220,12 +225,13 @@ function getUserByTelegramID(msg) {
     } else {
         chat = msg.hasOwnProperty('chat') ? msg.chat.id : msg.from.id;
     }
-    return api.find({chat: chat}).then(users => {
-        if (users.length > 0) {
-            console.log(users)
-            return users[0]
+    return ap.request(
+        {
+            "url": "user",
+            "filters": {"idTelegram": chat},
+            method: "GET"
         }
-    })/*.then(user => {
+    )/*.then(user => {
         if (user && user.days_of_subscription <= 0) {
             api.request({url: "subscriptions", method: "GET", filters: {"_sort": "price:ASC"}}).then(plans => {
                 if (plans) {
@@ -266,6 +272,15 @@ function processReturnedUser(msgInfo) {
 //function processRegisterUser()
 async function registerUser(msgInfo) {
     let apiU = new api(msgInfo)
+    await ap.request({
+        "url": "user/add", "method": "POST", body: {
+            // subscription: "5f44102d479cca001db181d7",
+            "nickname": msgInfo.chat,
+            "name": msgInfo.name,
+            "idTelegram": msgInfo.chat,
+            "lastName": msgInfo.last_name
+        }
+    })
     await apiU.save().then(res => {
         console.log("Успішно зареєстровано!")
     });
@@ -596,11 +611,33 @@ bot.on('callback_query', (msg) => {
             break;
         case "apartments": {
             selectApartmentAsFilter(msg, reply, chat)
+
         }
             break;
         default:
             if (reply.includes("set_city")) {
                 typeOfApartments(reply, chat, msg)
+
+                /*getUserByTelegramID(msg).then(user => {
+                    /!*return api.request({
+                        "url": "users",
+                        "method": "PUT",
+                        "id": user.id,
+                        body: {preferences: {city: reply.split(":")[1]}}
+                    })*!/
+                })*/
+            } else if (reply.includes("rooms")) {
+                //TODO Put to user room
+                /*getUserByTelegramID(msg).then(user => {
+                    /!*return api.request({
+                        "url": "users",
+                        "method": "PUT",
+                        "id": user.id,
+                        body: {preferences: {city: reply.split(":")[1]}}
+                    })*!/
+                })*/
+            } else if (reply.includes("apartments")) {
+                //TODO Put to user apart
                 /*getUserByTelegramID(msg).then(user => {
                     /!*return api.request({
                         "url": "users",
