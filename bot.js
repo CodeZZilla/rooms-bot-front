@@ -1,38 +1,26 @@
 const TelegramBot = require('node-telegram-bot-api');
-const token_tg = "1953524348:AAGnDAeg5c1dLkAqWiQmy-cTPRwpyWAJlN4";
+const token_tg = "1953524348:AAEiweX_SQqWYD_YcZgep8IZMjO7y-hBmoM";
 const ADMIN_CHAT = -1001589426879;
 const passgen = require('passgen');
 const bot = new TelegramBot(token_tg, {polling: true});
 const MANAGER_CHAT = -1001339183887;
-const cities = require("./api/cities-api")
-require('./test-connection-db');
+// require('./test-connection-db');
 
 
 const apiTests = require('./api/Api');
 let ap = new apiTests()
-// ap.request().then(r => console.log(r));
-
-//Тут у нас тестовые темы вместо API
-//apiTest -- тут JSON-файл записан в масив объетов, это по-сути готовый ответ с API
-let apiTest = require('./api-request.json')
-const api = require('./api/client-api')
 
 const {
     getMainDataFromMsg,
     createApartmentsMessage
 } = require("./utils/TelegramUtils")
 
-api.deleteOne({chat: "447833870"}).then(res => {
-    console.log(res)
-})
-
 bot.onText(/\/start/, (msg) => {
-    console.log(msg)
     try {
         let msgInfo = getMainDataFromMsg(msg);
-        let key = msg.text.replace("/start", '').trim();
-        let password = passgen.create(20);
-        console.log(msgInfo)
+        // let key = msg.text.replace("/start", '').trim();
+        // let password = passgen.create(20);
+
         getUserByTelegramID(msg).then(user => {
             if (user) {
                 processReturnedUser(msgInfo);
@@ -228,10 +216,12 @@ function getUserByTelegramID(msg) {
     return ap.request(
         {
             "url": "user",
-            "filters": {"idTelegram": chat},
+            "id": chat,
             method: "GET"
         }
-    )/*.then(user => {
+    ).then(res => {
+        return res;
+    })/*.then(user => {
         if (user && user.days_of_subscription <= 0) {
             api.request({url: "subscriptions", method: "GET", filters: {"_sort": "price:ASC"}}).then(plans => {
                 if (plans) {
@@ -271,7 +261,6 @@ function processReturnedUser(msgInfo) {
 
 //function processRegisterUser()
 async function registerUser(msgInfo) {
-    let apiU = new api(msgInfo)
     await ap.request({
         "url": "user/add", "method": "POST", body: {
             // subscription: "5f44102d479cca001db181d7",
@@ -281,31 +270,25 @@ async function registerUser(msgInfo) {
             "lastName": msgInfo.last_name
         }
     })
-    await apiU.save().then(res => {
-        console.log("Успішно зареєстровано!")
-    });
 }
 
 function sendGreetingMessage(msgInfo) {
+    const cities = require('./cities.json')
     setTimeout(() => {
-        bot.sendMessage(msgInfo.chat, `Тобі надано 2 дні тестової підписки ;)`).then(() => {
-            bot.sendMessage(msgInfo.chat, `Ти з нами вперше - тому з чим тобі допомогти?`)
-            //processRegisterUser(msgInfo);
-        }).then(() => {
-            cities.find().then(cities => {
-                console.log(cities)
+        bot.sendMessage(msgInfo.chat, `Ти з нами вперше - тому з чим тобі допомогти?`)
+            .then(() => {
                 bot.sendMessage(msgInfo.chat, "Обери місто!", createKeyboardOpts(cities.map(city => {
                     return {text: city.name, callback_data: "set_city_type:" + city.id}
                 }), 3,))
+                /* ap.request({
+                     "url": "cities",
+                     "method": "GET"
+                 }).then(cities => {
+                     bot.sendMessage(msgInfo.chat, "Обери своє місто!", createKeyboardOpts(cities.map(city => {
+                         return {text: city.name, callback_data: "set_city_first:" + city.id}
+                     }), 3))
+                 })*/
             })
-            //     api.request({
-            //         "url": "cities", "method": "GET"
-            //     }).then(cities => {
-            //         bot.sendMessage(msgInfo.chat, "Обери своє місто!", createKeyboardOpts(cities.map(city => {
-            //             return {text: city.name, callback_data: "set_city_first:" + city.id}
-            //         }), 3))
-            //     })
-        })
     }, 1000)
 }
 
@@ -359,6 +342,7 @@ function listToMatrix(list, elementsPerSubArray) {
 
 function typeOfApartments(reply, chat, msg) {
     if (reply.includes("type")) {
+
         /*api.request({
             "url": "regions", "method": "GET", "filters": {"city.id": answer.split(":")[1]}
         }).then(regions => {
@@ -501,16 +485,16 @@ function selectApartmentAsFilter(msg, reply, chat) {
 
 const rooms = [
     {
-        "name" : "1"
+        "name": "1"
     },
     {
-        "name" : "2"
+        "name": "2"
     },
     {
-        "name" : "3"
+        "name": "3"
     },
     {
-        "name" : "4"
+        "name": "4"
     }
 ]
 
@@ -520,7 +504,7 @@ function prepareRoomsAmount(msg) {
             text: room.name,
             callback_data: "rooms:" + room.name
         }
-    }),2,[{text: "Зберегти 💾", callback_data: "save_amount_of_rooms"}])
+    }), 2, [{text: "Зберегти 💾", callback_data: "save_amount_of_rooms"}])
     /*const opts = {
         parse_mode: "Markdown",
         reply_markup: JSON.stringify({
@@ -536,6 +520,59 @@ function prepareRoomsAmount(msg) {
             ]
         })
     };*/
+    opts.reply_to_message_id = msg.message_id
+    return opts;
+}
+
+function prepareHighPriceOpts(msg) {
+    const opts = {
+        parse_mode: "Markdown",
+        reply_markup: JSON.stringify({
+            resize_keyboard: true,
+            inline_keyboard: [[{text: '5000 грн', callback_data: 'price:5000'}, {
+                text: '6000 грн',
+                callback_data: 'price:6000'
+            }, {text: '7000 грн', callback_data: 'price:7000'}],
+                [{text: '8000 грн', callback_data: 'price:8000'}, {
+                    text: '9000 грн',
+                    callback_data: 'price:9000'
+                }, {text: '10000 грн', callback_data: 'price:10000'}],
+                [{text: '11000 грн', callback_data: 'price:11000'}, {
+                    text: '12000 грн',
+                    callback_data: 'price:12000'
+                }, {text: '13000 грн', callback_data: 'price:13000'}],
+                [{text: '14000 грн', callback_data: 'price:14000'}, {
+                    text: '15000 грн',
+                    callback_data: 'price:15000'
+                }, {text: '16000 грн', callback_data: 'price:16000'}],
+                [{text: 'Я хочу найдорожчі квартири! 🤑', callback_data: 'price:50000'}]
+            ]
+        })
+    };
+    opts.reply_to_message_id = msg.message_id
+    return opts;
+}
+
+function prepareLowPriceOpts(msg) {
+    const opts = {
+        parse_mode: "Markdown",
+        reply_markup: JSON.stringify({
+            resize_keyboard: true,
+            inline_keyboard: [[{text: '1500 грн', callback_data: 'price_low:1500'}, {
+                text: '2000 грн',
+                callback_data: 'price_low:2000'
+            }, {text: '3000 грн', callback_data: 'price_low:3000'}],
+                [{text: '4000 грн', callback_data: 'price_low:4000'}, {
+                    text: '5000 грн',
+                    callback_data: 'price_low:5000'
+                }, {text: '6000 грн', callback_data: 'price_low:6000'}],
+                [{text: '7000 грн', callback_data: 'price_low:7000'}, {
+                    text: '8000 грн',
+                    callback_data: 'price_low:8000'
+                }]
+            ]
+        })
+    };
     opts.reply_to_message_id = msg.message_id
     return opts;
 }
@@ -595,7 +632,7 @@ function selectRoomsAmount(msg, reply, chat) {
             "id": user.id,
             body: {preferences: user.preferences}
         })*/
-        //bot.sendMessage(chat, "Обери нижню ціну"/*, lowPriceOpts*/)
+    //bot.sendMessage(chat, "Обери нижню ціну"/*, lowPriceOpts*/)
 
 }
 
@@ -604,6 +641,9 @@ bot.on('callback_query', (msg) => {
     let chat = msg.hasOwnProperty('chat') ? msg.chat.id : msg.from.id;
     let msgInfo = getMainDataFromMsg(msg)
     let reply = msg.data;
+    const highPriceOpts = prepareHighPriceOpts(msg);
+    const lowPriceOpts = prepareLowPriceOpts(msg);
+
     switch (reply) {
         case "rooms": {
             //selectRoomAsFilter(msg, answer, chat)
@@ -614,11 +654,21 @@ bot.on('callback_query', (msg) => {
 
         }
             break;
+        case "buy": {
+            bot.sendMessage(chat , 'На жаль ця функція не працює 😥 \nМи повидомимо коли буде можливість купувати квартири')
+        }
+            break;
+        case "rent": {
+
+            bot.sendMessage(chat, 'Давай визначимо твій бюджет')
+            bot.sendMessage(chat, 'Вибери мінімальний рівень', lowPriceOpts)
+        }
+            break;
         default:
             if (reply.includes("set_city")) {
-                typeOfApartments(reply, chat, msg)
-
-                /*getUserByTelegramID(msg).then(user => {
+                const opts = prepareRentOrBuy(msg)
+                bot.sendMessage(chat, "Що шукаєте?", opts)
+                /*-getUserByTelegramID(msg).then(user => {
                     /!*return api.request({
                         "url": "users",
                         "method": "PUT",
@@ -626,6 +676,13 @@ bot.on('callback_query', (msg) => {
                         body: {preferences: {city: reply.split(":")[1]}}
                     })*!/
                 })*/
+            } else if(reply.includes("price_low:")){
+                getUserByTelegramID(msg).then(async user => {
+                    // await saveLowestPrice(user, reply);
+
+                    bot.deleteMessage(chat, msg.message_id);
+                    bot.sendMessage(chat, "Обери верхню ціну", highPriceOpts)
+                })
             } else if (reply.includes("rooms")) {
                 //TODO Put to user room
                 /*getUserByTelegramID(msg).then(user => {

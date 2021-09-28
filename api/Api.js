@@ -10,6 +10,7 @@ module.exports = class Api {
     }
 
     request(params) {
+
         const self = this;
         const param = new URLSearchParams();
         param.append('username', 'admin')
@@ -25,7 +26,6 @@ module.exports = class Api {
         }).then(res => {
             return res.json()
         }).then(json => {
-            console.log(json)
             self.authToken = json.access_token;
             let args;
             let headers = {
@@ -62,9 +62,13 @@ module.exports = class Api {
             }*/
             // let resultUrl = 'http://localhost:8080/api/apartments/allByParams?city=Киев&type=аренда'
             let resultUrl = self.endpoint + params.url + (params.id ? "/" + params.id : '' + ((params.filters) ? "?" + new URLSearchParams(params.filters).toString() : ''));
+            console.log(resultUrl)
             return fetch(resultUrl, args).then(resp => {
-                console.log(resp)
-                return resp.json()
+                if (resp.status === 404) {
+                    return false
+                } else {
+                    return resp.json()
+                }
             })
         })
     }
