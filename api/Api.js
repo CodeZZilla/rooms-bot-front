@@ -64,6 +64,8 @@ module.exports = class Api {
             let resultUrl = self.endpoint + params.url + (params.id ? "/" + params.id : '' + ((params.filters) ? "?" + new URLSearchParams(params.filters).toString() : ''));
             console.log(resultUrl)
             return fetch(resultUrl, args).then(resp => {
+                // console.log('*************************************************')
+                // console.log(resp)
                 if (resp.status === 404) {
                     return false
                 } else {

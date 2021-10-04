@@ -4,16 +4,30 @@ const ADMIN_CHAT = -1001589426879;
 const passgen = require('passgen');
 const bot = new TelegramBot(token_tg, {polling: true});
 const MANAGER_CHAT = -1001339183887;
-// require('./test-connection-db');
-
-
 const apiTests = require('./api/Api');
 let ap = new apiTests()
+const {getMainDataFromMsg, createApartmentsMessage} = require("./utils/TelegramUtils")
+const regions = require("./regions.json");
+const metroFile = require("./metro-kyiv.json");
+const rooms = [
+    {
+        "name": "1"
+    },
+    {
+        "name": "2"
+    },
+    {
+        "name": "3"
+    },
+    {
+        "name": "4"
+    }
+]
+let roomsMinMax = '';
 
-const {
-    getMainDataFromMsg,
-    createApartmentsMessage
-} = require("./utils/TelegramUtils")
+function getRandomInt(max) {
+    return Math.floor(Math.random() * max);
+}
 
 bot.onText(/\/start/, (msg) => {
     try {
@@ -26,6 +40,7 @@ bot.onText(/\/start/, (msg) => {
                 processReturnedUser(msgInfo);
             } else {
                 registerUser(msgInfo);
+
                 bot.sendMessage(msgInfo.chat, `Привіт, ${msgInfo.name} ${msgInfo.last_name}!\nЦе 🤖 компанії РУМС!\nТут ти зможеш:
                         \n▫️обрати необхідні тобі фільтри для персональних підбірок
                         \n▫️тримати зв'язок із персональним помічником
@@ -205,7 +220,6 @@ bot.onText(/Оновити фільтри/, (msg) => {
     })
 })
 
-
 function getUserByTelegramID(msg) {
     let chat;
     if (!msg.chat && !msg.from) {
@@ -259,7 +273,6 @@ function processReturnedUser(msgInfo) {
     })
 }
 
-//function processRegisterUser()
 async function registerUser(msgInfo) {
     await ap.request({
         "url": "user/add", "method": "POST", body: {
@@ -278,7 +291,7 @@ function sendGreetingMessage(msgInfo) {
         bot.sendMessage(msgInfo.chat, `Ти з нами вперше - тому з чим тобі допомогти?`)
             .then(() => {
                 bot.sendMessage(msgInfo.chat, "Обери місто!", createKeyboardOpts(cities.map(city => {
-                    return {text: city.name, callback_data: "set_city_type:" + city.id}
+                    return {text: city.name, callback_data: "set_city_regions:" + city.id}
                 }), 3,))
                 /* ap.request({
                      "url": "cities",
@@ -289,26 +302,6 @@ function sendGreetingMessage(msgInfo) {
                      }), 3))
                  })*/
             })
-    }, 1000)
-}
-
-function sendPriceMessage(msgInfo) {
-    setTimeout(() => {
-        bot.sendMessage(msgInfo.chat, `Обери ціну\/n Від скіккох тисяч повина бути ціна`).then(() => {
-            cities.find().then(cities => {
-                console.log(cities)
-                bot.sendMessage(msgInfo.chat, "Обери місто!", createKeyboardOpts(cities.map(city => {
-                    return {text: city.name, callback_data: "set_city_first:" + city.id}
-                }), 3))
-            })
-            //     api.request({
-            //         "url": "cities", "method": "GET"
-            //     }).then(cities => {
-            //         bot.sendMessage(msgInfo.chat, "Обери своє місто!", createKeyboardOpts(cities.map(city => {
-            //             return {text: city.name, callback_data: "set_city_first:" + city.id}
-            //         }), 3))
-            //     })
-        })
     }, 1000)
 }
 
@@ -340,31 +333,6 @@ function listToMatrix(list, elementsPerSubArray) {
     return matrix;
 }
 
-function typeOfApartments(reply, chat, msg) {
-    if (reply.includes("type")) {
-
-        /*api.request({
-            "url": "regions", "method": "GET", "filters": {"city.id": answer.split(":")[1]}
-        }).then(regions => {
-            var keyboard = createKeyboardOpts(regions.map(region => {
-                return {
-                    text: region.name,
-                    callback_data: "rg_first:" + region.id
-                }
-            }), 1, [{text: "Зберегти райони 💾", callback_data: "save_regions_first"}]);
-            if (regions.length > 0) {
-                bot.sendMessage(chat, "Обери свій район! (Можна декілька)", keyboard)
-            } else {
-                sendMainMenu(msg)
-            }
-        })*/
-        getUserByTelegramID(msg).then(user => {
-            const opts = prepareRoomsOrApartment(msg);
-            bot.sendMessage(chat, "Що шукаєте?", opts)
-        })
-
-    }
-}
 
 function sendMainMenu(msg) {
     let chat = msg.hasOwnProperty('chat') ? msg.chat.id : msg.from.id;
@@ -398,26 +366,6 @@ function sendMainMenu(msg) {
     bot.sendMessage(chat, 'Оберіть пункт меню', opts);
 }
 
-function setCityForUser(answer, chat, msg) {
-    if (answer.includes("first")) {
-        api.request({
-            "url": "regions", "method": "GET", "filters": {"city.id": answer.split(":")[1]}
-        }).then(regions => {
-            var keyboard = createKeyboardOpts(regions.map(region => {
-                return {
-                    text: region.name,
-                    callback_data: "rg_first:" + region.id
-                }
-            }), 1, [{text: "Зберегти райони 💾", callback_data: "save_regions_first"}]);
-            if (regions.length > 0) {
-                bot.sendMessage(chat, "Обери свій район! (Можна декілька)", keyboard)
-            } else {
-                sendMainMenu(msg)
-            }
-        })
-    }
-}
-
 function prepareRentOrBuy(msg) {
     const opts = {
         parse_mode: "Markdown",
@@ -441,85 +389,34 @@ function prepareRentOrBuy(msg) {
     return opts;
 }
 
-function prepareRoomsOrApartment(msg) {
-    const opts = {
-        parse_mode: "Markdown",
-        reply_markup: JSON.stringify({
-            resize_keyboard: true,
-            inline_keyboard: [
-                [{text: 'Кімнати', callback_data: 'rooms'}, {text: 'Квартири', callback_data: 'apartments'}]]
-        })
-    };
+function selectMaxRooms(msg, reply, chat) {
+    const roomsAmount = prepareMaxRoom(msg);
+    bot.sendMessage(chat, "Обери максимальну кількість кімнат:", roomsAmount)
+}
+
+function selectMinRooms(msg, reply, chat) {
+    const roomsAmount = prepareMinRoom(msg);
+    bot.sendMessage(chat, "Обери кількість кімнат:", roomsAmount)
+}
+
+function prepareMinRoom(msg) {
+    const opts = createKeyboardOpts(rooms.map(room => {
+        return {
+            text: room.name,
+            callback_data: "min_rooms:" + room.name
+        }
+    }), 2)
     opts.reply_to_message_id = msg.message_id
     return opts;
 }
 
-// TODO Реалізувати PUT для кімнат
-/*function selectRoomAsFilter(msg, answer, chat) {
-    const lowPriceOpts = prepareLowPriceOpts(msg);
-    getUserByTelegramID(msg).then(user => {
-        user.preferences.rooms = true;
-        api.request({
-            "url": "users",
-            "method": "PUT",
-            "id": user.id,
-            body: {preferences: user.preferences}
-        })
-        bot.sendMessage(chat, "Обери нижню ціну", lowPriceOpts)
-    })
-}*/
-
-function selectApartmentAsFilter(msg, reply, chat) {
-    const roomsAmount = prepareRoomsAmount(msg);
-    /*getUserByTelegramID(msg).then(user => {
-        user.preferences.rooms = false;
-        api.request({
-            "url": "users",
-            "method": "PUT",
-            "id": user.id,
-            body: {preferences: user.preferences}
-        })
-    })*/
-    bot.sendMessage(chat, "Обери кількість кімнат, зауваж, ми шукаємо по максимальній кількості обраних тобою кімнат\nНаприклад - якщо ти обереш 1-кімнатні, ми будемо шукати лише 1-кімнатні об'єкти, але якщо ти обереш 3-кімнатні, то у пошуку будуть як одно- так і дво- та і троьхкімнатні !!!", roomsAmount)
-}
-
-const rooms = [
-    {
-        "name": "1"
-    },
-    {
-        "name": "2"
-    },
-    {
-        "name": "3"
-    },
-    {
-        "name": "4"
-    }
-]
-
-function prepareRoomsAmount(msg) {
+function prepareMaxRoom(msg) {
     const opts = createKeyboardOpts(rooms.map(room => {
         return {
             text: room.name,
-            callback_data: "rooms:" + room.name
+            callback_data: "max_rooms:" + room.name
         }
-    }), 2, [{text: "Зберегти 💾", callback_data: "save_amount_of_rooms"}])
-    /*const opts = {
-        parse_mode: "Markdown",
-        reply_markup: JSON.stringify({
-            resize_keyboard: true,
-            inline_keyboard: [[{text: 'Однокімнатна', callback_data: 'rooms:1'}, {
-                text: 'Двохкімнатна',
-                callback_data: 'rooms:2'
-            }],
-                [{text: 'Трьохкімнатна', callback_data: 'rooms:3'}, {
-                    text: 'Чотирьохкімнатна',
-                    callback_data: 'rooms:4'
-                }]
-            ]
-        })
-    };*/
+    }), 2, [{text: "Пропустити 💾", callback_data: "save_amount_of_rooms"}])
     opts.reply_to_message_id = msg.message_id
     return opts;
 }
@@ -576,6 +473,153 @@ function prepareLowPriceOpts(msg) {
     opts.reply_to_message_id = msg.message_id
     return opts;
 }
+
+function setRegions(reply, chat, msg) {
+    const regions = require('./regions.json')
+    let keyboard;
+    getUserByTelegramID(msg).then(user => {
+        regions.map(region => {
+            if (region.id === user.city) {
+                keyboard = createKeyboardOpts(region.regions.map(region_name => {
+                    return {
+                        text: region_name.name,
+                        callback_data: "rg:" + region_name.id
+                    }
+                }), 1, [{text: "Зберегти райони 💾", callback_data: "save_regions"}]);
+
+            }
+        })
+    }).then(() => {
+
+        bot.sendMessage(chat, "Обери свій район! (Можна декілька)", keyboard)
+    })
+
+
+}
+
+function setMetro(reply, chat, msg) {
+    const metroFile = require('./metro-kyiv.json');
+    let keyboardEnd = [];
+    let keyboard = [];
+    getUserByTelegramID(msg).then(user => {
+        for (let j = 0; j < metroFile.length; j++) {
+            for (let i = 0; i < user.region.length; i++) {
+                if (user.region[i] === metroFile[j].id) {
+                    metroFile[j].metros.map(metro => {
+                        keyboard.push({
+                            text: (metro.color ? metro.color === 'green' ? '🟢' : metro.color === 'red' ? "🔴" : metro.color === 'blue' ? "🔵" : "" : "") + " " + metro.name,
+                            callback_data: "set_metro_first:" + metro.name
+                        })
+                        // keyboardEnd = createKeyboardOpts(keyboard, 1, [{
+                        //     text: "Зберегти райони 💾",
+                        //     callback_data: "save_regions"
+                        // }])
+                    });
+                }
+            }
+        }
+    }).then(() => {
+        keyboard = keyboard.filter((v, i, a) => a.findIndex(t => (t.text === v.text && t.callback_data === v.callback_data)) === i)
+        keyboardEnd = createKeyboardOpts(keyboard, 1, [{text: "Зберегти станції 💾", callback_data: "save_metro"}])
+        console.log(keyboard)
+        bot.sendMessage(chat, "Обери станції! 🚝 (Можна декілька)", keyboardEnd)
+
+    })
+
+}
+
+function selectRegionKeyboard(msg, reply, chat) {
+    getUserByTelegramID(msg).then(user => {
+        user.region = user.region === null ? [] : user.region;
+        if (!user.region.map(reg => reg).includes(reply.split(":")[1])) {
+            user.region.push((reply.split(":")[1]));
+            ap.request({
+                "url": "user/updateById/" + user.id,
+                "method": "PUT",
+                body: user
+            })
+            bot.editMessageText("Обери свій район!(Можна декілька)", {
+                chat_id: chat,
+                message_id: msg.message.message_id,
+                reply_markup: JSON.stringify({
+                    inline_keyboard: msg.message.reply_markup.inline_keyboard.map(arr => {
+                        if (arr[0].callback_data.includes(reply)) {
+                            arr[0].text = "✅| " + arr[0].text
+                        }
+                        return arr;
+                    })
+                })
+            })
+        } else {
+            user.region = user.region.filter(id => id !== reply.split(":")[1]);
+            ap.request({
+                "url": "user/updateById/" + user.id,
+                "method": "PUT",
+                body: user
+            })
+            bot.editMessageText("Обери свій район!(Можна декілька)", {
+                chat_id: chat,
+                message_id: msg.message.message_id,
+                reply_markup: JSON.stringify({
+                    inline_keyboard: msg.message.reply_markup.inline_keyboard.map(arr => {
+                        if (arr[0].callback_data.includes(reply)) {
+                            arr[0].text = arr[0].text.replace("✅| ", " ");
+                        }
+                        return arr
+                    })
+                })
+            })
+        }
+    })
+
+}
+
+function selectMetroKeyboard(msg, reply, chat) {
+    getUserByTelegramID(msg).then(user => {
+        user.metroNames = user.metroNames === null ? [] : user.metroNames;
+        if (!user.metroNames.map(reg => reg).includes(reply.split(":")[1])) {
+            user.metroNames.push((reply.split(":")[1]));
+            ap.request({
+                "url": "user/updateById/" + user.id,
+                "method": "PUT",
+                body: user
+            })
+            bot.editMessageText("Обери станції! 🚝 (Можна декілька)", {
+                chat_id: chat,
+                message_id: msg.message.message_id,
+                reply_markup: JSON.stringify({
+                    inline_keyboard: msg.message.reply_markup.inline_keyboard.map(arr => {
+                        if (arr[0].callback_data.includes(reply)) {
+                            arr[0].text = "✅| " + arr[0].text
+                        }
+                        return arr;
+                    })
+                })
+            })
+        } else {
+            user.metroNames = user.metroNames.filter(id => id !== reply.split(":")[1]);
+            ap.request({
+                "url": "user/updateById/" + user.id,
+                "method": "PUT",
+                body: user
+            })
+            bot.editMessageText("Обери станції! 🚝 (Можна декілька)", {
+                chat_id: chat,
+                message_id: msg.message.message_id,
+                reply_markup: JSON.stringify({
+                    inline_keyboard: msg.message.reply_markup.inline_keyboard.map(arr => {
+                        if (arr[0].callback_data.includes(reply)) {
+                            arr[0].text = arr[0].text.replace("✅| ", " ");
+                        }
+                        return arr
+                    })
+                })
+            })
+        }
+    })
+
+}
+
 
 function selectRoomsAmount(msg, reply, chat) {
     getUserByTelegramID(msg).then(user => {
@@ -636,6 +680,99 @@ function selectRoomsAmount(msg, reply, chat) {
 
 }
 
+
+function sendApartmentMessageForUser(user, captionString, resp) {
+    bot.sendMessage(user.idTelegram, captionString)
+}
+
+function sendRandomApartmentCarousel(user, photos, captionString) {
+    bot.sendMediaGroup(user.idTelegram, (photos.length) > 0 ? photos : [{
+        type: 'photo',
+        media: "http://consaltliga.com.ua/wp-content/themes/consultix/images/no-image-found-360x250.png"
+    }],).then(resp => {
+        sendApartmentMessageForUser(user, captionString, resp);
+    })
+}
+
+function sendRandomCarouselWithoutPhoto(user, photos, apartmentId, captionString, apartment) {
+    bot.sendMediaGroup(user.telegram_id, (photos.length) > 0 ? photos : [{
+        type: 'photo',
+        media: "http://consaltliga.com.ua/wp-content/themes/consultix/images/no-image-found-360x250.png"
+    }], {"disable_notification": true}).then(resp => {
+        let viewConfig = {previos: -1, next: 0}
+        if (user.messaging_history.todayCompilation.indexOf(apartmentId) !== -1) {
+            viewConfig.previos = user.messaging_history.todayCompilation.indexOf(apartmentId) - 1 >= 0 ? user.messaging_history.todayCompilation.indexOf(apartmentId) - 1 : -1;
+            viewConfig.next = user.messaging_history.todayCompilation.indexOf(apartmentId) + 1 <= user.messaging_history.todayCompilation.length - 1 ? user.messaging_history.todayCompilation.indexOf(apartmentId) + 1 : 0;
+        } else {
+            viewConfig = {previos: -1, next: 0}
+        }
+        sendApartmentMessageForUser(user, captionString, apartmentId, apartment, viewConfig, resp);
+    }).catch(() => {
+        let viewConfig = {previos: -1, next: 0}
+        if (user.messaging_history.todayCompilation.indexOf(apartmentId) !== -1) {
+            viewConfig.previos = user.messaging_history.todayCompilation.indexOf(apartmentId) - 1 >= 0 ? user.messaging_history.todayCompilation.indexOf(apartmentId) - 1 : -1;
+            viewConfig.next = user.messaging_history.todayCompilation.indexOf(apartmentId) + 1 <= user.messaging_history.todayCompilation.length - 1 ? user.messaging_history.todayCompilation.indexOf(apartmentId) + 1 : 0;
+        } else {
+            viewConfig = {previos: -1, next: 0}
+        }
+        bot.sendMessage(user.telegram_id, captionString, {
+            parse_mode: "Markdown",
+            "disable_notification": true,
+            reply_markup: JSON.stringify({
+                resize_keyboard: true,
+                inline_keyboard: [[{
+                    text: user.liked_apartments.map(ap => ap.id).includes(apartmentId) ? "Збережено ✅" : 'Зберегти  ❤',
+                    callback_data: 'like:' + apartment.id
+                }, {
+                    text: 'Детальніше ℹ️',
+                    callback_data: 'detail_info:' + apartment.id
+                }], [{
+                    text: viewConfig.previos === -1 ? "⏺" : '◀️ Попередня',
+                    callback_data: 'aps:' + user.messaging_history.todayCompilation[viewConfig.previos] + ":"
+                }, {
+                    text: 'Наступна ▶️',
+                    callback_data: 'aps:' + user.messaging_history.todayCompilation[viewConfig.next] + ":"
+                }]]
+            })
+        })
+    })
+}
+
+
+function sendRandomApartment(msg) {
+    getUserByTelegramID(msg).then(user => {
+        ap.request({
+            "url": "apartments/allByParams",
+            "method": "GET",
+            filters: {
+                city: user.city ? user.city : '',
+                type: user.isRent ? 'аренда' : '',
+                priceMin: user.priceMin ? user.priceMin : '',
+                priceMax: user.priceMax ? user.priceMax : '',
+                countRoomsMin: user.roomsMin ? user.roomsMin : '',
+                countRoomsMax: user.roomsMax ? user.roomsMax : '',
+                subLocationName: user.region ? user.region.join() : '',
+                metro: user.metroNames ? user.metroNames.join() : ''
+            }
+        }).then(apartments => {
+            if (apartments) {
+                let rnd = getRandomInt(apartments.length);
+                console.log('|||||||||||||||||||||||||||||||||||||||||||||')
+                console.log(apartments[rnd])
+                let captionString = createApartmentsMessage(apartments[rnd], apartments[rnd].location.metro.name);
+                let photos = apartments[rnd].images.slice(0, 5).map(photo => {
+                    return {type: "photo", media: photo}
+                });
+                sendRandomApartmentCarousel(user, photos, captionString);
+            } else {
+                bot.sendMessage(user.idTelegram, 'На жаль квартири за даними параметрами не знайдено')
+            }
+
+        })
+    })
+}
+
+
 bot.on('callback_query', (msg) => {
     console.log(msg)
     let chat = msg.hasOwnProperty('chat') ? msg.chat.id : msg.from.id;
@@ -645,43 +782,144 @@ bot.on('callback_query', (msg) => {
     const lowPriceOpts = prepareLowPriceOpts(msg);
 
     switch (reply) {
-        case "rooms": {
-            //selectRoomAsFilter(msg, answer, chat)
-        }
-            break;
-        case "apartments": {
-            selectApartmentAsFilter(msg, reply, chat)
-
-        }
-            break;
         case "buy": {
-            bot.sendMessage(chat , 'На жаль ця функція не працює 😥 \nМи повидомимо коли буде можливість купувати квартири')
+            const opts = prepareRentOrBuy(msg)
+            bot.deleteMessage(chat, msg.message.message_id);
+            bot.sendMessage(chat, 'На жаль ця функція не працює 😥 \nМи повидомимо коли буде можливість купувати квартири\n Оберіть інший варіант', opts)
+        }
+            break;
+        case "YES": {
+            setTimeout(() => {
+                bot.deleteMessage(chat, msg.message.message_id);
+                bot.sendMessage(chat, 'Домовились, ти матимеш доступ до квартир без комісії та ріелторів 24/7, я перевірю документи власника всіх квартир, які тобі сподобаються, і надішлю тобі якісний договір оренди\n\n\n\n ТУТ ОПЛАТА УЖЕ БУДЕТ')
+            }, 5000)
+            sendRandomApartment(msg)
         }
             break;
         case "rent": {
-
-            bot.sendMessage(chat, 'Давай визначимо твій бюджет')
-            bot.sendMessage(chat, 'Вибери мінімальний рівень', lowPriceOpts)
+            getUserByTelegramID(msg).then(user => {
+                user.isRent = true;
+                return ap.request({
+                    "url": "user/updateById/" + user.id,
+                    "method": "PUT",
+                    body: user
+                })
+            })
+            setTimeout(() => {
+                bot.deleteMessage(chat, msg.message.message_id);
+                bot.sendMessage(chat, 'Давай визначимо твій бюджет \nВибери мінімальний рівень', lowPriceOpts)
+            }, 5000)
+            sendRandomApartment(msg)
+        }
+            break;
+        case "save_regions" : {
+            setTimeout(() => {
+                bot.deleteMessage(chat, msg.message.message_id);
+                setMetro(reply, chat, msg)
+            }, 5000)
+            sendRandomApartment(msg)
+        }
+            break;
+        case "save_metro" : {
+            bot.deleteMessage(chat, msg.message.message_id);
+            bot.sendMessage(chat, 'Все я розібрався, яка тобі потрібна квартира. В мене зараз їх 120 шт.\n' +
+                'І щодня з’являються ще по 3 свіженьких.\n' +
+                '\n' +
+                '\n' +
+                'Показати їх?', {
+                parse_mode: "Markdown",
+                reply_markup: JSON.stringify({
+                    resize_keyboard: true,
+                    inline_keyboard: [[{text: 'ТАК!', callback_data: 'YES'}]]
+                })
+            })
+        }
+            break;
+        case "save_amount_of_rooms": {
+            getUserByTelegramID(msg).then(user => {
+                user.roomsMax = roomsMinMax
+                return ap.request({
+                    "url": "user/updateById/" + user.id,
+                    "method": "PUT",
+                    body: user
+                })
+            }).then(() => {
+                bot.deleteMessage(chat, msg.message.message_id);
+                setRegions(reply, chat, msg);
+            })
         }
             break;
         default:
             if (reply.includes("set_city")) {
-                const opts = prepareRentOrBuy(msg)
-                bot.sendMessage(chat, "Що шукаєте?", opts)
-                /*-getUserByTelegramID(msg).then(user => {
-                    /!*return api.request({
-                        "url": "users",
-                        "method": "PUT",
-                        "id": user.id,
-                        body: {preferences: {city: reply.split(":")[1]}}
-                    })*!/
-                })*/
-            } else if(reply.includes("price_low:")){
-                getUserByTelegramID(msg).then(async user => {
-                    // await saveLowestPrice(user, reply);
+                getUserByTelegramID(msg).then(user => {
+                    user.city = (reply.split(':'))[1]
 
-                    bot.deleteMessage(chat, msg.message_id);
+                    return ap.request({
+                        "url": "user/updateById/" + user.id,
+                        "method": "PUT",
+                        body: user
+                    })
+                }).then(() => {
+                    const opts = prepareRentOrBuy(msg)
+                    bot.deleteMessage(chat, msg.message.message_id);
+                    bot.sendMessage(chat, "Що шукаєте?", opts)
+                })
+
+            } else if (reply.includes("price_low:")) {
+                getUserByTelegramID(msg).then(user => {
+                    user.priceMin = (reply.split(':'))[1]
+                    return ap.request({
+                        "url": "user/updateById/" + user.id,
+                        "method": "PUT",
+                        body: user
+                    })
+                }).then(() => {
+                    bot.deleteMessage(chat, msg.message.message_id);
                     bot.sendMessage(chat, "Обери верхню ціну", highPriceOpts)
+                })
+            } else if (reply.includes("price:")) {
+                getUserByTelegramID(msg).then(user => {
+                    user.priceMax = (reply.split(':'))[1]
+                    return ap.request({
+                        "url": "user/updateById/" + user.id,
+                        "method": "PUT",
+                        body: user
+                    })
+                }).then(() => {
+                    setTimeout(() => {
+                        bot.deleteMessage(chat, msg.message.message_id);
+                        selectMinRooms(msg, reply, chat)
+                    }, 5000)
+                    sendRandomApartment(msg)
+
+                })
+            } else if (reply.includes("min_rooms:")) {
+                getUserByTelegramID(msg).then(user => {
+                    roomsMinMax = (reply.split(':'))[1]
+                    user.roomsMin = (reply.split(':'))[1]
+                    return ap.request({
+                        "url": "user/updateById/" + user.id,
+                        "method": "PUT",
+                        body: user
+                    })
+                }).then(() => {
+                    bot.deleteMessage(chat, msg.message.message_id);
+                    selectMaxRooms(msg, reply, chat)
+                })
+            } else if (reply.includes("max_rooms:")) {
+                getUserByTelegramID(msg).then(user => {
+                    user.roomsMax = (reply.split(':'))[1]
+                    return ap.request({
+                        "url": "user/updateById/" + user.id,
+                        "method": "PUT",
+                        body: user
+                    })
+                }).then(() => {
+                    setTimeout(() => {
+                        bot.deleteMessage(chat, msg.message.message_id);
+                        setRegions(reply, chat, msg);
+                    }, 5000)
+                    sendRandomApartment(msg)
                 })
             } else if (reply.includes("rooms")) {
                 //TODO Put to user room
@@ -705,8 +943,11 @@ bot.on('callback_query', (msg) => {
                 })*/
             } else if (reply.includes("rooms")) {
                 selectRoomsAmount(msg, reply, chat)
+            } else if (reply.includes("rg")) {
+                selectRegionKeyboard(msg, reply, chat);
+            } else if (reply.includes("set_metro_first")) {
+                selectMetroKeyboard(msg, reply, chat);
             }
-
 
     }
 
