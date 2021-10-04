@@ -399,6 +399,11 @@ function selectMinRooms(msg, reply, chat) {
     bot.sendMessage(chat, "Обери кількість кімнат:", roomsAmount)
 }
 
+function selectRooms(msg, reply, chat) {
+    const roomsAmount = prepareRoom(msg);
+    bot.sendMessage(chat, "Обери кількість кімнат:", roomsAmount)
+}
+
 function prepareMinRoom(msg) {
     const opts = createKeyboardOpts(rooms.map(room => {
         return {
@@ -417,6 +422,17 @@ function prepareMaxRoom(msg) {
             callback_data: "max_rooms:" + room.name
         }
     }), 2, [{text: "Пропустити 💾", callback_data: "save_amount_of_rooms"}])
+    opts.reply_to_message_id = msg.message_id
+    return opts;
+}
+
+function prepareRoom(msg) {
+    const opts = createKeyboardOpts(rooms.map(room => {
+        return {
+            text: room.name,
+            callback_data: "rooms:" + room.name
+        }
+    }), 2, [{text: "Зберегти 💾", callback_data: "save_amount_of_rooms"}])
     opts.reply_to_message_id = msg.message_id
     return opts;
 }
@@ -620,6 +636,53 @@ function selectMetroKeyboard(msg, reply, chat) {
 
 }
 
+//TODO Выбор квартир как метро
+function selectRoomsKeyboard(msg, reply, chat) {
+    getUserByTelegramID(msg).then(user => {
+        user.rooms = user.rooms === null ? [] : user.rooms;
+        if (!user.rooms.map(room => room).includes(reply.split(":")[1])) {
+            user.rooms.push((reply.split(":")[1]));
+            ap.request({
+                "url": "user/updateById/" + user.id,
+                "method": "PUT",
+                body: user
+            })
+            bot.editMessageText("Обери кількість кімнат", {
+                chat_id: chat,
+                message_id: msg.message.message_id,
+                reply_markup: JSON.stringify({
+                    inline_keyboard: msg.message.reply_markup.inline_keyboard.map(arr => {
+                        if (arr[0].callback_data.includes(reply)) {
+                            arr[0].text = "✅| " + arr[0].text
+                        }
+                        return arr;
+                    })
+                })
+            })
+        } else {
+            user.rooms = user.rooms.filter(id => id !== reply.split(":")[1]);
+            ap.request({
+                "url": "user/updateById/" + user.id,
+                "method": "PUT",
+                body: user
+            })
+            bot.editMessageText("Обери свій район!(Можна декілька)", {
+                chat_id: chat,
+                message_id: msg.message.message_id,
+                reply_markup: JSON.stringify({
+                    inline_keyboard: msg.message.reply_markup.inline_keyboard.map(arr => {
+                        if (arr[0].callback_data.includes(reply)) {
+                            arr[0].text = arr[0].text.replace("✅| ", " ");
+                        }
+                        return arr
+                    })
+                })
+            })
+        }
+    })
+
+}
+
 
 function selectRoomsAmount(msg, reply, chat) {
     getUserByTelegramID(msg).then(user => {
@@ -742,25 +805,23 @@ function sendRandomCarouselWithoutPhoto(user, photos, apartmentId, captionString
 function sendRandomApartment(msg) {
     getUserByTelegramID(msg).then(user => {
         ap.request({
-            "url": "apartments/allByParams",
+            "url": "apartments/randomByParams",
             "method": "GET",
             filters: {
                 city: user.city ? user.city : '',
                 type: user.isRent ? 'аренда' : '',
                 priceMin: user.priceMin ? user.priceMin : '',
                 priceMax: user.priceMax ? user.priceMax : '',
-                countRoomsMin: user.roomsMin ? user.roomsMin : '',
-                countRoomsMax: user.roomsMax ? user.roomsMax : '',
+                rooms:user.rooms ? user.region.join() : '',
                 subLocationName: user.region ? user.region.join() : '',
                 metro: user.metroNames ? user.metroNames.join() : ''
             }
         }).then(apartments => {
             if (apartments) {
-                let rnd = getRandomInt(apartments.length);
-                console.log('|||||||||||||||||||||||||||||||||||||||||||||')
-                console.log(apartments[rnd])
-                let captionString = createApartmentsMessage(apartments[rnd], apartments[rnd].location.metro.name);
-                let photos = apartments[rnd].images.slice(0, 5).map(photo => {
+                console.log(apartments)
+                // let rnd = getRandomInt(apartments.length);
+                let captionString = createApartmentsMessage(apartments[0], apartments[0].location.metro.name);
+                let photos = apartments[0].images.slice(0, 5).map(photo => {
                     return {type: "photo", media: photo}
                 });
                 sendRandomApartmentCarousel(user, photos, captionString);
@@ -888,7 +949,7 @@ bot.on('callback_query', (msg) => {
                 }).then(() => {
                     setTimeout(() => {
                         bot.deleteMessage(chat, msg.message.message_id);
-                        selectMinRooms(msg, reply, chat)
+                        selectRooms(msg, reply, chat)
                     }, 5000)
                     sendRandomApartment(msg)
 
@@ -923,14 +984,7 @@ bot.on('callback_query', (msg) => {
                 })
             } else if (reply.includes("rooms")) {
                 //TODO Put to user room
-                /*getUserByTelegramID(msg).then(user => {
-                    /!*return api.request({
-                        "url": "users",
-                        "method": "PUT",
-                        "id": user.id,
-                        body: {preferences: {city: reply.split(":")[1]}}
-                    })*!/
-                })*/
+                selectRooms(msg, reply, chat)
             } else if (reply.includes("apartments")) {
                 //TODO Put to user apart
                 /*getUserByTelegramID(msg).then(user => {
@@ -942,7 +996,7 @@ bot.on('callback_query', (msg) => {
                     })*!/
                 })*/
             } else if (reply.includes("rooms")) {
-                selectRoomsAmount(msg, reply, chat)
+                selectRoomsKeyboard(msg, reply, chat)
             } else if (reply.includes("rg")) {
                 selectRegionKeyboard(msg, reply, chat);
             } else if (reply.includes("set_metro_first")) {
