@@ -1,14 +1,14 @@
+require('dotenv').config({path: __dirname + '/.env'})
+
 const TelegramBot = require('node-telegram-bot-api');
-const token_tg = "1953524348:AAEiweX_SQqWYD_YcZgep8IZMjO7y-hBmoM";
+
+const token_tg = process.env.TELEGRAM_TOKEN;
 const ADMIN_CHAT = -1001589426879;
-const passgen = require('passgen');
 const bot = new TelegramBot(token_tg, {polling: true});
 const MANAGER_CHAT = -1001339183887;
 const apiTests = require('./api/Api');
 let ap = new apiTests()
 const {getMainDataFromMsg, createApartmentsMessage} = require("./utils/TelegramUtils")
-const regions = require("./regions.json");
-const metroFile = require("./metro-kyiv.json");
 const rooms = [
     {
         "name": "1"
@@ -112,7 +112,6 @@ bot.onText(/Налаштування/, (msg) => {
 bot.onText(/Головне меню/, (msg) => {
     sendMainMenu(msg)
 });
-
 //TODO Fresh apartments
 bot.onText(/Свіжі квартири/, (msg) => {
     let msgInfo = getMainDataFromMsg(msg);
@@ -199,7 +198,6 @@ bot.onText(/Свіжі квартири/, (msg) => {
     // })
     sendMainMenu(msg)
 })
-
 //TODO Refresh filters
 bot.onText(/Оновити фільтри/, (msg) => {
     let msgInfo = getMainDataFromMsg(msg);
@@ -685,28 +683,43 @@ function selectRoomsKeyboard(msg, reply, chat) {
 
 function sendRandomApartment(msg) {
     getUserByTelegramID(msg).then(user => {
+        console.log(user)
         ap.request({
             "url": "apartments/randomByParams",
             "method": "GET",
             filters: {
                 city: user.city ? user.city : '',
-                type: user.isRent ? 'аренда' : '',
+                type: 'аренда' ,
                 priceMin: user.priceMin ? user.priceMin : '',
                 priceMax: user.priceMax ? user.priceMax : '',
-                rooms: user.rooms ? user.region.join() : '',
+                rooms: user.rooms ? user.rooms.join() : '',
                 subLocationName: user.region ? user.region.join() : '',
                 metro: user.metroNames ? user.metroNames.join() : ''
             }
         }).then(apartments => {
+            let metro = [];
             if (apartments) {
+                let metroArray = require('./metros.json');
+                for(let i = 0, len = metroArray.length ; i < len; i++ ){
+                    if(metroArray[i].name === apartments.location.metro.name){
+                        metro = metroArray[i];
+                    }
+                }
                 console.log(apartments)
-                let captionString = createApartmentsMessage(apartments[0], apartments[0].location.metro.name);
+                console.log('"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""')
+                console.log(metro)
+                let captionString = createApartmentsMessage(apartments, metro);
                 let photos = [];
-                for (let i = 0; i < apartments[0].images.slice(0, 5).length; i++) {
+                for (let i = 0; i < apartments.images.slice(0, 5).length; i++) {
                     if (i === 0) {
-                        photos.push({type: "photo", media: apartments[0].images[i], caption: captionString,parse_mode: "Markdown"})
-                    }else{
-                        photos.push({type: "photo", media: apartments[0].images[i]})
+                        photos.push({
+                            type: "photo",
+                            media: apartments.images[i],
+                            caption: captionString,
+                            parse_mode: "Markdown"
+                        })
+                    } else {
+                        photos.push({type: "photo", media: apartments.images[i]})
                     }
                 }
                 bot.sendMediaGroup(user.idTelegram, (photos.length) > 0 ? photos : [{
@@ -722,9 +735,8 @@ function sendRandomApartment(msg) {
     })
 }
 
-
 bot.on('callback_query', (msg) => {
-    console.log(msg)
+    // console.log(msg)
     let chat = msg.hasOwnProperty('chat') ? msg.chat.id : msg.from.id;
     let msgInfo = getMainDataFromMsg(msg)
     let reply = msg.data;
@@ -741,14 +753,26 @@ bot.on('callback_query', (msg) => {
         case "YES": {
             setTimeout(() => {
                 bot.deleteMessage(chat, msg.message.message_id);
-                bot.sendMessage(chat, 'Домовились, ти матимеш доступ до квартир без комісії та ріелторів 24/7, я перевірю документи власника всіх квартир, які тобі сподобаються, і надішлю тобі якісний договір оренди\n\n\n\n ТУТ ОПЛАТА УЖЕ БУДЕТ')
+                bot.sendMessage(chat, 'Домовились, ти матимеш доступ до квартир без комісії та ріелторів 24/7, я перевірю документи власника всіх квартир, які тобі сподобаються, і надішлю тобі якісний договір оренди\n\n\n\n ТУТ ОПЛАТА УЖЕ БУДЕТ', {
+                    parse_mode: "Markdown",
+                    reply_markup: JSON.stringify({
+                        resize_keyboard: true,
+                        inline_keyboard: [[{
+                            text: 'На 7 днів - 199 грн',
+                            callback_data: 'YES'
+                        }], [{text: 'На 14 днів 299 грн', callback_data: 'YES'}], [{
+                            text: 'На 30 днів - 499 грн',
+                            callback_data: 'YES'
+                        }]]
+                    })
+                })
             }, 5000)
             sendRandomApartment(msg)
         }
             break;
         case "rent": {
             getUserByTelegramID(msg).then(user => {
-                user.isRent = true;
+                user.rent = true;
                 return ap.request({
                     "url": "user/updateById/" + user.id,
                     "method": "PUT",
@@ -794,8 +818,11 @@ bot.on('callback_query', (msg) => {
                     body: user
                 })
             }).then(() => {
-                bot.deleteMessage(chat, msg.message.message_id);
-                setRegions(reply, chat, msg);
+                setTimeout(() => {
+                    bot.deleteMessage(chat, msg.message.message_id);
+                    setRegions(reply, chat, msg);
+                }, 5000)
+                sendRandomApartment(msg)
             })
         }
             break;
@@ -891,8 +918,6 @@ bot.on('callback_query', (msg) => {
             } else if (reply.includes("set_metro_first")) {
                 selectMetroKeyboard(msg, reply, chat);
             }
-
     }
-
 })
 

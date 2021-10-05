@@ -1,0 +1,170 @@
+[
+  {
+    "name": "Академгородок",
+    "color": "red"
+  },
+  {
+    "name": "Житомирская",
+    "color": "red"
+  },
+  {
+    "name": "Святошин",
+    "color": "red"
+  },
+  {
+    "name": "Нивки",
+    "color": "red"
+  },
+  {
+    "name": "Берестейская",
+    "color": "red"
+  },
+  {
+    "name": "Шулявка",
+    "color": "red"
+  },
+  {
+    "name": "Политехнический институт",
+    "color": "red"
+  },
+  {
+    "name": "Вокзальная",
+    "color": "red"
+  },
+  {
+    "name": "Славутич",
+    "color": "green"
+  },
+  {
+    "name": "Осокорки",
+    "color": "green"
+  },
+  {
+    "name": "Позняки",
+    "color": "green"
+  },
+  {
+    "name": "Харьковская",
+    "color": "green"
+  },
+  {
+    "name": "Вырлица",
+    "color": "green"
+  },
+  {
+    "name": "Бориспольская",
+    "color": "green"
+  },
+  {
+    "name": "Черниговская",
+    "color": "red"
+  },
+  {
+    "name": "Лесная",
+    "color": "red"
+  },
+  {
+    "name": "Гидропарк",
+    "color": "red"
+  },
+  {
+    "name": "Левобережная",
+    "color": "red"
+  },
+  {
+    "name": "Дарниця",
+    "color": "red"
+  },
+  {
+    "name": "Университет",
+    "color": "red"
+  },
+  {
+    "name": "Театральная",
+    "color": "red"
+  },
+  {
+    "name": "Майдан Независимости",
+    "color": "blue"
+  },
+  {
+    "name": "Площадь Льва Толстого",
+    "color": "blue"
+  },
+  {
+    "name": "Сырец",
+    "color": "green"
+  },
+  {
+    "name": "Дорогожичи",
+    "color": "green"
+  },
+  {
+    "name": "Лукьяновская",
+    "color": "green"
+  },
+  {
+    "name": "Золотые Ворота",
+    "color": "green"
+  },
+  {
+    "name": "Тараса Шевченко",
+    "color": "blue"
+  },
+  {
+    "name": "Контрактовая площадь",
+    "color": "blue"
+  },
+  {
+    "name": "Почтовая площадь",
+    "color": "blue"
+  },
+  {
+    "name": "Крещатик",
+    "color": "red"
+  },
+  {
+    "name": "Арсенальная",
+    "color": "red"
+  },
+  {
+    "name": "Днепр",
+    "color": "red"
+  },
+  {
+    "name": "Олимпийская",
+    "color": "blue"
+  },
+  {
+    "name": "Дворец Украина",
+    "color": "blue"
+  },
+  {
+    "name": "Лыбедская",
+    "color": "blue"
+  },
+  {
+    "name": "Кловская",
+    "color": "green"
+  },
+  {
+    "name": "Печерская",
+    "color": "green"
+  },
+  {
+    "name": "Дружбы Народов",
+    "color": "green"
+  },
+  {
+    "name": "Минская",
+    "color": "blue"
+  },
+  {
+    "name": "Оболонь",
+    "color": "blue"
+  },
+  {
+    "name": "Петровка",
+    "color": "blue"
+  }
+]
