@@ -640,7 +640,7 @@ function selectMetroKeyboard(msg, reply, chat) {
 function selectRoomsKeyboard(msg, reply, chat) {
     getUserByTelegramID(msg).then(user => {
         user.rooms = user.rooms === null ? [] : user.rooms;
-        let userClickData =reply.split(":")[1]
+        let userClickData = reply.split(":")[1]
         let userRoomsArrToString = user.rooms.map(room => room.toString());
         if (!userRoomsArrToString.includes(userClickData)) {
             user.rooms.push(userClickData);
@@ -756,7 +756,7 @@ function sendRandomApartmentCarousel(user, photos, captionString) {
         type: 'photo',
         media: "http://consaltliga.com.ua/wp-content/themes/consultix/images/no-image-found-360x250.png"
     }]).then(resp => {
-        sendApartmentMessageForUser(user, captionString, resp);
+        // sendApartmentMessageForUser(user, captionString, resp);
     })
 }
 
@@ -815,19 +815,26 @@ function sendRandomApartment(msg) {
                 type: user.isRent ? 'аренда' : '',
                 priceMin: user.priceMin ? user.priceMin : '',
                 priceMax: user.priceMax ? user.priceMax : '',
-                rooms:user.rooms ? user.region.join() : '',
+                rooms: user.rooms ? user.region.join() : '',
                 subLocationName: user.region ? user.region.join() : '',
                 metro: user.metroNames ? user.metroNames.join() : ''
             }
         }).then(apartments => {
             if (apartments) {
                 console.log(apartments)
-                // let rnd = getRandomInt(apartments.length);
                 let captionString = createApartmentsMessage(apartments[0], apartments[0].location.metro.name);
-                let photos = apartments[0].images.slice(0, 5).map(photo => {
-                    return {type: "photo", media: photo}
-                });
-                sendRandomApartmentCarousel(user, photos, captionString);
+                let photos = [];
+                for (let i = 0; i < apartments[0].images.slice(0, 5).length; i++) {
+                    if (i === 0) {
+                        photos.push({type: "photo", media: apartments[0].images[i], caption: captionString})
+                    }else{
+                        photos.push({type: "photo", media: apartments[0].images[i]})
+                    }
+                }
+                bot.sendMediaGroup(user.idTelegram, (photos.length) > 0 ? photos : [{
+                    type: 'photo',
+                    media: "https://consaltliga.com.ua/wp-content/themes/consultix/images/no-image-found-360x250.png"
+                }])
             } else {
                 bot.sendMessage(user.idTelegram, 'На жаль квартири за даними параметрами не знайдено')
             }
@@ -988,7 +995,7 @@ bot.on('callback_query', (msg) => {
             } /*else if (reply.includes("rooms")) {
                 //TODO Put to user room
                 selectRooms(msg, reply, chat)
-            } */else if (reply.includes("apartments")) {
+            } */ else if (reply.includes("apartments")) {
                 //TODO Put to user apart
                 /*getUserByTelegramID(msg).then(user => {
                     /!*return api.request({
