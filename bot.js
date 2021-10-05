@@ -432,7 +432,7 @@ function prepareRoom(msg) {
             text: room.name,
             callback_data: "rooms:" + room.name
         }
-    }), 2, [{text: "Зберегти 💾", callback_data: "save_amount_of_rooms"}])
+    }), 1, [{text: "Зберегти 💾", callback_data: "save_amount_of_rooms"}])
     opts.reply_to_message_id = msg.message_id
     return opts;
 }
@@ -567,7 +567,7 @@ function selectRegionKeyboard(msg, reply, chat) {
                 })
             })
         } else {
-            user.region = user.region.filter(id => id !== reply.split(":")[1]);
+            user.region = user.region.filter(id => id === reply.split(":")[1]);
             ap.request({
                 "url": "user/updateById/" + user.id,
                 "method": "PUT",
@@ -640,8 +640,10 @@ function selectMetroKeyboard(msg, reply, chat) {
 function selectRoomsKeyboard(msg, reply, chat) {
     getUserByTelegramID(msg).then(user => {
         user.rooms = user.rooms === null ? [] : user.rooms;
-        if (!user.rooms.map(room => room).includes(reply.split(":")[1])) {
-            user.rooms.push((reply.split(":")[1]));
+        let userClickData =reply.split(":")[1]
+        let userRoomsArrToString = user.rooms.map(room => room.toString());
+        if (!userRoomsArrToString.includes(userClickData)) {
+            user.rooms.push(userClickData);
             ap.request({
                 "url": "user/updateById/" + user.id,
                 "method": "PUT",
@@ -660,19 +662,20 @@ function selectRoomsKeyboard(msg, reply, chat) {
                 })
             })
         } else {
-            user.rooms = user.rooms.filter(id => id !== reply.split(":")[1]);
+            console.log("СОДЕРЖИТ")
+            user.rooms = userRoomsArrToString.filter(id => id !== userClickData);
             ap.request({
                 "url": "user/updateById/" + user.id,
                 "method": "PUT",
                 body: user
             })
-            bot.editMessageText("Обери свій район!(Можна декілька)", {
+            bot.editMessageText("Обери кількість кімнат", {
                 chat_id: chat,
                 message_id: msg.message.message_id,
                 reply_markup: JSON.stringify({
                     inline_keyboard: msg.message.reply_markup.inline_keyboard.map(arr => {
                         if (arr[0].callback_data.includes(reply)) {
-                            arr[0].text = arr[0].text.replace("✅| ", " ");
+                            arr[0].text = arr[0].text.replace("✅| ", "");
                         }
                         return arr
                     })
@@ -752,7 +755,7 @@ function sendRandomApartmentCarousel(user, photos, captionString) {
     bot.sendMediaGroup(user.idTelegram, (photos.length) > 0 ? photos : [{
         type: 'photo',
         media: "http://consaltliga.com.ua/wp-content/themes/consultix/images/no-image-found-360x250.png"
-    }],).then(resp => {
+    }]).then(resp => {
         sendApartmentMessageForUser(user, captionString, resp);
     })
 }
@@ -982,10 +985,10 @@ bot.on('callback_query', (msg) => {
                     }, 5000)
                     sendRandomApartment(msg)
                 })
-            } else if (reply.includes("rooms")) {
+            } /*else if (reply.includes("rooms")) {
                 //TODO Put to user room
                 selectRooms(msg, reply, chat)
-            } else if (reply.includes("apartments")) {
+            } */else if (reply.includes("apartments")) {
                 //TODO Put to user apart
                 /*getUserByTelegramID(msg).then(user => {
                     /!*return api.request({
