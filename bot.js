@@ -1,7 +1,6 @@
 require('dotenv').config({path: __dirname + '/.env'})
 
 const TelegramBot = require('node-telegram-bot-api');
-
 const token_tg = process.env.TELEGRAM_TOKEN;
 const ADMIN_CHAT = -1001589426879;
 const bot = new TelegramBot(token_tg, {polling: true});
@@ -24,10 +23,9 @@ const rooms = [
     }
 ]
 let roomsMinMax = '';
+const TRANZZO_TOKEN = process.env.TRANZZO_TOKEN;
 
-function getRandomInt(max) {
-    return Math.floor(Math.random() * max);
-}
+
 
 bot.onText(/\/start/, (msg) => {
     try {
@@ -331,7 +329,6 @@ function listToMatrix(list, elementsPerSubArray) {
     return matrix;
 }
 
-
 function sendMainMenu(msg) {
     let chat = msg.hasOwnProperty('chat') ? msg.chat.id : msg.from.id;
     const opts = {
@@ -392,25 +389,9 @@ function selectMaxRooms(msg, reply, chat) {
     bot.sendMessage(chat, "Обери максимальну кількість кімнат:", roomsAmount)
 }
 
-function selectMinRooms(msg, reply, chat) {
-    const roomsAmount = prepareMinRoom(msg);
-    bot.sendMessage(chat, "Обери кількість кімнат:", roomsAmount)
-}
-
 function selectRooms(msg, reply, chat) {
     const roomsAmount = prepareRoom(msg);
     bot.sendMessage(chat, "Обери кількість кімнат:", roomsAmount)
-}
-
-function prepareMinRoom(msg) {
-    const opts = createKeyboardOpts(rooms.map(room => {
-        return {
-            text: room.name,
-            callback_data: "min_rooms:" + room.name
-        }
-    }), 2)
-    opts.reply_to_message_id = msg.message_id
-    return opts;
 }
 
 function prepareMaxRoom(msg) {
@@ -689,7 +670,7 @@ function sendRandomApartment(msg) {
             "method": "GET",
             filters: {
                 city: user.city ? user.city : '',
-                type: 'аренда' ,
+                type: 'аренда',
                 priceMin: user.priceMin ? user.priceMin : '',
                 priceMax: user.priceMax ? user.priceMax : '',
                 rooms: user.rooms ? user.rooms.join() : '',
@@ -700,8 +681,8 @@ function sendRandomApartment(msg) {
             let metro = [];
             if (apartments) {
                 let metroArray = require('./metros.json');
-                for(let i = 0, len = metroArray.length ; i < len; i++ ){
-                    if(metroArray[i].name === apartments.location.metro.name){
+                for (let i = 0, len = metroArray.length; i < len; i++) {
+                    if (metroArray[i].name === apartments.location.metro.name) {
                         metro = metroArray[i];
                     }
                 }
@@ -731,6 +712,63 @@ function sendRandomApartment(msg) {
         })
     })
 }
+
+bot.onText(/pay/i, function (msg) {
+    let iKeys = [];
+    iKeys.push([{
+        text: "2 €",
+        callback_data: "pay:2.00"
+    },{
+        text: "10 €",
+        callback_data: "pay:10.00"
+    }]);
+
+    bot.sendMessage(msg.chat.id, "Виберіть свій тариф", {
+        parse_mode: 'Markdown',
+        disable_web_page_preview: true,
+        reply_markup: {
+            inline_keyboard: iKeys
+        }
+    });
+});
+
+
+bot.on('message', function (message) {
+    if (message.successful_payment != undefined) {
+        var savedPayload = "yyy";	// get from db
+        var savedStatus = "zzz";	// get from db, this should be "WAIT"
+        if ((savedPayload != message.successful_payment.invoice_payload) || (savedStatus != "WAIT")) {	// match saved data to payment data received
+            bot.sendMessage(message.chat.id, "Payment verification failed");
+            return;
+        }
+
+        // payment successfull
+        bot.sendMessage(message.chat.id, "Payment complete!");
+    }
+});
+
+/*bot.onText(/\/pay/, (msg) => {
+    let prices = [
+        {label: '1', amount: 134 * 100},
+        {label: '2', amount: 154 * 100}
+    ]
+    bot.sendInvoice(msg.chat.id, "TEST", "Lorem ipsum isefif hello? Let`s go lal lal ",
+        `${msg.chat.id}_${Number(new Date())}`, TRANZZO_TOKEN, 'get_access', 'UAH',prices, {
+            parse_mode: "Markdown",
+            reply_markup: JSON.stringify({
+                resize_keyboard: true,
+                inline_keyboard: [
+                    [{
+                        text: 'На 7 днів - 199 грн',
+                        callback_data: 'YES'
+                    }], [{text: 'На 14 днів 299 грн', callback_data: 'YES'}], [{
+                        text: 'На 30 днів - 499 грн',
+                        callback_data: 'YES'
+                    }]
+                ]
+            })
+        })
+})*/
 
 bot.on('callback_query', (msg) => {
     // console.log(msg)
@@ -827,7 +865,6 @@ bot.on('callback_query', (msg) => {
             if (reply.includes("set_city")) {
                 getUserByTelegramID(msg).then(user => {
                     user.city = (reply.split(':'))[1]
-
                     return ap.request({
                         "url": "user/updateById/" + user.id,
                         "method": "PUT",
@@ -839,6 +876,14 @@ bot.on('callback_query', (msg) => {
                     bot.sendMessage(chat, "Що шукаєте?", opts)
                 })
 
+            } else if(reply.includes("pay:")){
+                let param = reply.split(":")[1];
+                    let payload = msg.chat.id + Date.now() + param;
+                    let prices = [{
+                        label: "Donation",
+                        amount: parseInt(param.replace(".", ""))
+                    }];
+                    bot.sendInvoice(msg.chat.id, "Donation", "Donation of " + param + "€", payload, TRANZZO_TOKEN, "pay", "EUR", prices);
             } else if (reply.includes("price_low:")) {
                 getUserByTelegramID(msg).then(user => {
                     user.priceMin = (reply.split(':'))[1]
