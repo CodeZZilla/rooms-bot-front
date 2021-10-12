@@ -117,7 +117,7 @@ bot.onText(/Свіжі квартири/, (msg) => {
         if (user.daysOfSubscription > 0) {
             user.todayCompilation = user.todayCompilation === null ? [] : user.todayCompilation;
             if (user.todayCompilation.length > 0) {
-
+                sendApartments(user, user.todayCompilation[0])
             } else {
                 bot.sendMessage(msgInfo.chat, "Свежих квартир нет")
             }
@@ -212,30 +212,31 @@ bot.onText(/Свіжі квартири/, (msg) => {
 
 function sendApartments(user, idApartments) {
     ap.request({
-        "url": "user",
-        "id": idApartments,
+        url: "apartments/find",
+        filters: {id:idApartments},
         method: "GET"
     }).then(apartment=>{
+        console.dir(apartment)
         let metro = [];
         if (apartment) {
             let metroArray = require('./metros.json');
             for (let i = 0, len = metroArray.length; i < len; i++) {
-                if (metroArray[i].name === apartments.location.metro.name) {
+                if (metroArray[i].name === apartment[0].location.metro.name) {
                     metro = metroArray[i];
                 }
             }
-            let captionString = createApartmentsMessage(apartment, metro);
+            let captionString = createApartmentsMessage(apartment[0], metro);
             let photos = [];
-            for (let i = 0; i < apartment.images.slice(0, 5).length; i++) {
+            for (let i = 0; i < apartment[0].images.slice(0, 5).length; i++) {
                 if (i === 0) {
                     photos.push({
                         type: "photo",
-                        media: apartment.images[i],
+                        media: apartment[0].images[i],
                         caption: captionString,
                         parse_mode: "Markdown"
                     })
                 } else {
-                    photos.push({type: "photo", media: apartments.images[i]})
+                    photos.push({type: "photo", media: apartment[0].images[i]})
                 }
             }
             bot.sendMediaGroup(user.idTelegram, (photos.length) > 0 ? photos : [{
@@ -246,7 +247,7 @@ function sendApartments(user, idApartments) {
                 reply_markup: JSON.stringify({
                     resize_keyboard: true,
                     inline_keyboard: [[{
-                        text: user.liked_apartments.map(ap => ap.id).includes(apartmentId) ? "Збережено ✅" : 'Зберегти  ❤',
+                        text: user.savedApartments.map(ap => ap.id).includes(idApartments) ? "Збережено ✅" : 'Зберегти  ❤',
                         callback_data: 'like:' + apartment.id
                     }, {
                         text: 'Детальніше ℹ️',
