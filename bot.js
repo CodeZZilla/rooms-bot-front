@@ -390,6 +390,7 @@ function createKeyboardOpts(list, elementsPerSubArray, args) {
     }
     const opts = {
         parse_mode: "Markdown",
+        disable_web_page_preview: true,
         reply_markup: JSON.stringify({
             resize_keyboard: true,
             inline_keyboard: list1
@@ -794,66 +795,34 @@ function sendRandomApartment(msg) {
     })
 }
 
-bot.onText(/pay/i, function (msg) {
-    let iKeys = [];
-    iKeys.push([{
-        text: "2 €",
-        callback_data: "pay:2.00"
-    }, {
-        text: "10 €",
-        callback_data: "pay:10.00"
-    }]);
 
-    bot.sendMessage(msg.chat.id, "Виберіть свій тариф", {
-        parse_mode: 'Markdown',
-        disable_web_page_preview: true,
-        reply_markup: {
-            inline_keyboard: iKeys
+bot.onText(/pay/, function (msg) {
+    let iKeys = [
+        {
+            value: "На 7 днів - 199 грн",
+            amount: "199.00"
+        },
+        {
+            value: "На 14 днів 299 грн",
+            amount: "299.00"
+        },
+        {
+            value: "На 30 днів - 499 грн",
+            amount: "499.00"
         }
-    });
-});
-
-
-bot.on('message', function (message) {
-    if (message.successful_payment != undefined) {
-        var savedPayload = "yyy";	// get from db
-        var savedStatus = "zzz";	// get from db, this should be "WAIT"
-        if ((savedPayload != message.successful_payment.invoice_payload) || (savedStatus != "WAIT")) {	// match saved data to payment data received
-            bot.sendMessage(message.chat.id, "Payment verification failed");
-            return;
+    ];
+    bot.sendMessage(msg.chat.id, "Виберіть свій тариф", createKeyboardOpts(iKeys.map(key => {
+        return {
+            text: key.value,
+            callback_data: "pay:" + key.amount
         }
-
-        // payment successfull
-        bot.sendMessage(message.chat.id, "Payment complete!");
-    }
+    }), 1));
 });
-
-/*bot.onText(/\/pay/, (msg) => {
-    let prices = [
-        {label: '1', amount: 134 * 100},
-        {label: '2', amount: 154 * 100}
-    ]
-    bot.sendInvoice(msg.chat.id, "TEST", "Lorem ipsum isefif hello? Let`s go lal lal ",
-        `${msg.chat.id}_${Number(new Date())}`, TRANZZO_TOKEN, 'get_access', 'UAH',prices, {
-            parse_mode: "Markdown",
-            reply_markup: JSON.stringify({
-                resize_keyboard: true,
-                inline_keyboard: [
-                    [{
-                        text: 'На 7 днів - 199 грн',
-                        callback_data: 'YES'
-                    }], [{text: 'На 14 днів 299 грн', callback_data: 'YES'}], [{
-                        text: 'На 30 днів - 499 грн',
-                        callback_data: 'YES'
-                    }]
-                ]
-            })
-        })
-})*/
 
 bot.on('callback_query', (msg) => {
     // console.log(msg)
     let chat = msg.hasOwnProperty('chat') ? msg.chat.id : msg.from.id;
+    let from = msg.from.id;
     let msgInfo = getMainDataFromMsg(msg)
     let reply = msg.data;
     const highPriceOpts = prepareHighPriceOpts(msg);
@@ -957,14 +926,25 @@ bot.on('callback_query', (msg) => {
                     bot.sendMessage(chat, "Що шукаєте?", opts)
                 })
 
-            } else if (reply.includes("pay:")) {
+
+            }
+            else if (reply.includes("pay:")) {
                 let param = reply.split(":")[1];
-                let payload = msg.chat.id + Date.now() + param;
+                let payload = chat + Date.now() + param.replace(".", "");
+                console.log(payload)
                 let prices = [{
-                    label: "Donation",
+                    label: "Оплатити",
                     amount: parseInt(param.replace(".", ""))
                 }];
-                bot.sendInvoice(msg.chat.id, "Donation", "Donation of " + param + "€", payload, TRANZZO_TOKEN, "pay", "EUR", prices);
+                bot.sendInvoice(chat, "Оберіть тариф", "Оплата у розмірі  " + param + " гривень", payload, TRANZZO_TOKEN, "pay", "UAH", prices);
+
+                // bot.on('pre_checkout_query',(asw) => asw.answerPreCheckoutQuery()
+
+
+
+                bot.on('successful_payment', async (asw) => { // ответ в случае положительной оплаты
+                    await asw.reply('SuccessfulPayment')
+                })
             } else if (reply.includes("price_low:")) {
                 getUserByTelegramID(msg).then(user => {
                     user.priceMin = (reply.split(':'))[1]
