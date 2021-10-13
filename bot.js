@@ -936,7 +936,26 @@ bot.on('callback_query', (msg) => {
                     label: "Оплатити",
                     amount: parseInt(param.replace(".", ""))
                 }];
-                bot.sendInvoice(chat, "Оберіть тариф", "Оплата у розмірі  " + param + " гривень", payload, TRANZZO_TOKEN, "pay", "UAH", prices);
+                bot.sendInvoice(chat, "Оберіть тариф", "Оплата у розмірі  " + param + " гривень", payload, TRANZZO_TOKEN, "pay", "UAH", prices).then(result=>{
+                    console.log(result)
+                });
+                bot.on('message', (ctx) => {
+                    console.log('LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL')
+                    console.log(ctx)
+                    if (ctx.update.message.successful_payment != undefined) {
+                        console.log('+++++++++++++++++===========================++++++++++++++++++++++++')
+                        ctx.reply('Thanks for the purchase!')
+                    } else {
+                        // Handle other message types, subtypes
+                    }
+                })
+                bot.on('pre_checkout_query', (ctx) => {
+                    console.log('QQWESREWDFTWCVFTYWXDVFTXWGHXVCGFWXCVXFCXVFWCX')
+                    console.log(ctx)
+                    bot.answerPreCheckoutQuery(ctx.id, true)
+                    console.log(ctx)
+
+                })
 
                 // bot.on('pre_checkout_query',(asw) => asw.answerPreCheckoutQuery()
 

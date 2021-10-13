@@ -17,7 +17,7 @@ module.exports = class Api {
         param.append('password', 'admin')
         param.append('grant_type', 'password')
         param.append('client_id', 'bot-client')
-        param.append('client_secret', 'f312bc3c-f348-4556-974b-a361cba1d5ac')
+        param.append('client_secret', 'c475f5e5-1327-404a-bdda-29c904b1fce7')
         param.append('scope', 'openid')
         return fetch('http://localhost:8484/auth/realms/bot/protocol/openid-connect/token', {
             method: 'POST',
