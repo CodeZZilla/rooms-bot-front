@@ -213,9 +213,9 @@ bot.onText(/Свіжі квартири/, (msg) => {
 function sendApartments(user, idApartments) {
     ap.request({
         url: "apartments/find",
-        filters: {id:idApartments},
+        filters: {id: idApartments},
         method: "GET"
-    }).then(apartment=>{
+    }).then(apartment => {
         console.dir(apartment)
         let metro = [];
         if (apartment) {
@@ -243,7 +243,7 @@ function sendApartments(user, idApartments) {
                 type: 'photo',
                 media: "https://consaltliga.com.ua/wp-content/themes/consultix/images/no-image-found-360x250.png",
 
-            }],{
+            }], {
                 reply_markup: JSON.stringify({
                     resize_keyboard: true,
                     inline_keyboard: [[{
@@ -252,7 +252,7 @@ function sendApartments(user, idApartments) {
                     }, {
                         text: 'Детальніше ℹ️',
                         callback_data: 'detail_info:' + apartment.id
-                    }],  [{
+                    }], [{
                         text: viewConfig.previos === -1 ? "⏺" : '◀️ Попередня',
                         callback_data: 'aps:' + user.messaging_history.todayCompilation[viewConfig.previos] + ":"
                     }, {
@@ -268,17 +268,16 @@ function sendApartments(user, idApartments) {
 }
 
 
-
 //TODO Refresh filters
 bot.onText(/Оновити фільтри/, (msg) => {
     let msgInfo = getMainDataFromMsg(msg);
-    let metros=require('./metros.json');
-    let metroNew=[]
+    let metros = require('./metros.json');
+    let metroNew = []
     getUserByTelegramID(msg).then(user => {
-        user.metroNames=user.metroNames===null?[]:user.metroNames;
-        metros.map(metro=>{
-            user.metroNames.map(user_metro=>{
-                if (user_metro==metro.name){
+        user.metroNames = user.metroNames === null ? [] : user.metroNames;
+        metros.map(metro => {
+            user.metroNames.map(user_metro => {
+                if (user_metro == metro.name) {
                     metroNew.push(metro);
                 }
             })
@@ -811,7 +810,7 @@ bot.onText(/pay/, function (msg) {
             amount: "499.00"
         }
     ];
-    bot.sendMessage(msg.chat.id, "Виберіть свій тариф", createKeyboardOpts(iKeys.map(key => {
+    bot.sendMessage(chat, "Виберіть свій тариф", createKeyboardOpts(iKeys.map(key => {
         return {
             text: key.value,
             callback_data: "pay:" + key.amount
@@ -836,23 +835,29 @@ bot.on('callback_query', (msg) => {
         }
             break;
         case "YES": {
-            setTimeout(() => {
-                bot.deleteMessage(chat, msg.message.message_id);
-                bot.sendMessage(chat, 'Домовились, ти матимеш доступ до квартир без комісії та ріелторів 24/7, я перевірю документи власника всіх квартир, які тобі сподобаються, і надішлю тобі якісний договір оренди\n\n\n\n ТУТ ОПЛАТА УЖЕ БУДЕТ', {
-                    parse_mode: "Markdown",
-                    reply_markup: JSON.stringify({
-                        resize_keyboard: true,
-                        inline_keyboard: [[{
-                            text: 'На 7 днів - 199 грн',
-                            callback_data: 'YES'
-                        }], [{text: 'На 14 днів 299 грн', callback_data: 'YES'}], [{
-                            text: 'На 30 днів - 499 грн',
-                            callback_data: 'YES'
-                        }]]
-                    })
-                })
-            }, 5000)
             sendRandomApartment(msg)
+            setTimeout(()=>{
+                let iKeys = [
+                    {
+                        value: "На 7 днів - 199 грн",
+                        amount: "199.00"
+                    },
+                    {
+                        value: "На 14 днів 299 грн",
+                        amount: "299.00"
+                    },
+                    {
+                        value: "На 30 днів - 499 грн",
+                        amount: "499.00"
+                    }
+                ];
+                bot.sendMessage(chat, "Виберіть свій тариф", createKeyboardOpts(iKeys.map(key => {
+                    return {
+                        text: key.value,
+                        callback_data: "pay:" + key.amount
+                    }
+                }), 1));
+            },5000)
         }
             break;
         case "rent": {
@@ -927,8 +932,7 @@ bot.on('callback_query', (msg) => {
                 })
 
 
-            }
-            else if (reply.includes("pay:")) {
+            } else if (reply.includes("pay:")) {
                 let param = reply.split(":")[1];
                 let payload = chat + Date.now() + param.replace(".", "");
                 console.log(payload)
@@ -936,33 +940,21 @@ bot.on('callback_query', (msg) => {
                     label: "Оплатити",
                     amount: parseInt(param.replace(".", ""))
                 }];
-                bot.sendInvoice(chat, "Оберіть тариф", "Оплата у розмірі  " + param + " гривень", payload, TRANZZO_TOKEN, "pay", "UAH", prices).then(result=>{
+                bot.sendInvoice(chat, "Оберіть тариф", "Оплата у розмірі  " + param + " гривень", payload, TRANZZO_TOKEN, "pay", "UAH", prices).then(result => {
                     console.log(result)
                 });
-                bot.on('message', (ctx) => {
-                    console.log('LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL')
-                    console.log(ctx)
-                    if (ctx.update.message.successful_payment != undefined) {
-                        console.log('+++++++++++++++++===========================++++++++++++++++++++++++')
-                        ctx.reply('Thanks for the purchase!')
+                bot.on('message', (msg) => {
+                    if (msg.successful_payment !== undefined) {
+                        //bot.sendMessage(msg.chat.id, "Вы купили vddgf подписку")
                     } else {
-                        // Handle other message types, subtypes
+                        console.log('PIZDA')
                     }
                 })
                 bot.on('pre_checkout_query', (ctx) => {
-                    console.log('QQWESREWDFTWCVFTYWXDVFTXWGHXVCGFWXCVXFCXVFWCX')
-                    console.log(ctx)
                     bot.answerPreCheckoutQuery(ctx.id, true)
-                    console.log(ctx)
-
                 })
-
-                // bot.on('pre_checkout_query',(asw) => asw.answerPreCheckoutQuery()
-
-
-
                 bot.on('successful_payment', async (asw) => { // ответ в случае положительной оплаты
-                    await asw.reply('SuccessfulPayment')
+                    await bot.sendMessage(chat, 'Вы купили подписку')
                 })
             } else if (reply.includes("price_low:")) {
                 getUserByTelegramID(msg).then(user => {
