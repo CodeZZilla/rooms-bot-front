@@ -17,8 +17,22 @@ function createApartmentsMessage(apartment, metro) {
     + `*Поверх*: ${apartment.floor}`
 }
 
+function createFiltersMessage(user, metro) {
+
+    return "Твої попередні фільтри:\n\n" + `*Місто*: ${user.city}\n\n` +
+        "*Райони*:\n" +user.region.map(region => "   👉" +region).join("\n")
+        + "\n\n*Станції метро*:\n " +
+        metro.map(metro => {
+            return `${(metro) ? (metro.name) ? ((metro.color ? metro.color === 'green' ? '🟢' : metro.color === 'red' ? "🔴" : metro.color === 'blue' ? "🔵" : "" : "") + " " + metro.name) : "" : ""}`
+        }).join(", ")
+        + `\n\n*Ціна від* ${user.priceMin} *до* ${user.priceMax}`
+        + `\n\n*Кількість кімнат:* `+user.rooms.map(room=>room).join(" ,")
+        + `\n\n*Тип пошуку*: ${user.isRooms?"Оренда":"Купівля"}`;
+}
+
 
 module.exports = {
     getMainDataFromMsg,
-    createApartmentsMessage
+    createApartmentsMessage,
+    createFiltersMessage
 }
