@@ -9,6 +9,8 @@ const apiTests = require('./api/Api');
 let ap = new apiTests()
 const {getMainDataFromMsg, createApartmentsMessage, createFiltersMessage} = require("./utils/TelegramUtils")
 const metroArray = require("./metros.json");
+const metroFile = require("./metro-kyiv.json");
+const cities = require("./cities.json");
 const rooms = [
     {
         "name": "1"
@@ -25,7 +27,6 @@ const rooms = [
 ]
 let roomsMinMax = '';
 const TRANZZO_TOKEN = process.env.TRANZZO_TOKEN;
-
 
 bot.onText(/\/start/, (msg) => {
     try {
@@ -110,7 +111,7 @@ bot.onText(/Налаштування/, (msg) => {
 bot.onText(/Головне меню/, (msg) => {
     sendMainMenu(msg)
 });
-//TODO Fresh apartments
+
 bot.onText(/Свіжі квартири/, (msg) => {
     let msgInfo = getMainDataFromMsg(msg);
     getUserByTelegramID(msg).then(user => {
@@ -210,6 +211,10 @@ bot.onText(/Свіжі квартири/, (msg) => {
     sendMainMenu(msg)
 })
 
+bot.onText(/pay/, (msg) => {
+    createInvoiceMsg(msg.chat.id);
+});
+
 function sendApartments(user, idApartments) {
     ap.request({
         url: "apartments/find",
@@ -267,8 +272,6 @@ function sendApartments(user, idApartments) {
     })
 }
 
-
-//TODO Refresh filters
 bot.onText(/Оновити фільтри/, (msg) => {
     let msgInfo = getMainDataFromMsg(msg);
     let metros = require('./metros.json');
@@ -284,17 +287,14 @@ bot.onText(/Оновити фільтри/, (msg) => {
         })
         bot.sendMessage(msgInfo.chat, createFiltersMessage(user, metroNew), {parse_mode: "Markdown"})
     })
+    const cities = require('./cities.json')
+    setTimeout(() => {
+        bot.sendMessage(msgInfo.chat, "Яке твоє місто?", createKeyboardOpts(cities.map(city => {
+            return {text: city.name, callback_data: "set_city_regions:" + city.id}
+        }), 3,))
+    }, 1000)
 
-    // api.request({
-    //     "url": "cities", "method": "GET"
-    // }).then(cities => {
-    //     setTimeout(() => {
-    //         bot.sendMessage(msgInfo.chat, "Обери своє місто!", createKeyboardOpts(cities.map(city => {
-    //             return {text: city.name, callback_data: "set_city_first:" + city.id}
-    //         }), 3))
-    //     }, 2000)
-    //
-    // })
+
 })
 
 function getUserByTelegramID(msg) {
@@ -367,17 +367,9 @@ function sendGreetingMessage(msgInfo) {
     setTimeout(() => {
         bot.sendMessage(msgInfo.chat, `Ти з нами вперше - тому з чим тобі допомогти?`)
             .then(() => {
-                bot.sendMessage(msgInfo.chat, "Обери місто!", createKeyboardOpts(cities.map(city => {
+                bot.sendMessage(msgInfo.chat, "Яке твоє місто?", createKeyboardOpts(cities.map(city => {
                     return {text: city.name, callback_data: "set_city_regions:" + city.id}
                 }), 3,))
-                /* ap.request({
-                     "url": "cities",
-                     "method": "GET"
-                 }).then(cities => {
-                     bot.sendMessage(msgInfo.chat, "Обери своє місто!", createKeyboardOpts(cities.map(city => {
-                         return {text: city.name, callback_data: "set_city_first:" + city.id}
-                     }), 3))
-                 })*/
             })
     }, 1000)
 }
@@ -451,11 +443,11 @@ function prepareRentOrBuy(msg) {
             inline_keyboard: [
                 [
                     {
-                        text: 'Оренда',
+                        text: 'Хочу орендувати',
                         callback_data: 'rent'
                     },
                     {
-                        text: 'Купівля',
+                        text: ' Хочу купити',
                         callback_data: 'buy'
                     }
                 ]
@@ -473,7 +465,7 @@ function selectMaxRooms(msg, reply, chat) {
 
 function selectRooms(msg, reply, chat) {
     const roomsAmount = prepareRoom(msg);
-    bot.sendMessage(chat, "Обери кількість кімнат:", roomsAmount)
+    bot.sendMessage(chat, "Скільки потрібно кімнат?", roomsAmount)
 }
 
 function prepareMaxRoom(msg) {
@@ -567,8 +559,7 @@ function setRegions(reply, chat, msg) {
             }
         })
     }).then(() => {
-
-        bot.sendMessage(chat, "Обери свій район! (Можна декілька)", keyboard)
+        bot.sendMessage(chat, "Давай ще уточнимо район в якому ти хочеш жити? (Можна декілька)", keyboard)
     })
 
 
@@ -578,26 +569,32 @@ function setMetro(reply, chat, msg) {
     const metroFile = require('./metro-kyiv.json');
     let keyboardEnd = [];
     let keyboard = [];
+
     getUserByTelegramID(msg).then(user => {
-        for (let j = 0; j < metroFile.length; j++) {
-            for (let i = 0; i < user.region.length; i++) {
-                if (user.region[i] === metroFile[j].id) {
-                    metroFile[j].metros.map(metro => {
-                        keyboard.push({
-                            text: (metro.color ? metro.color === 'green' ? '🟢' : metro.color === 'red' ? "🔴" : metro.color === 'blue' ? "🔵" : "" : "") + " " + metro.name,
-                            callback_data: "set_metro_first:" + metro.name
-                        })
-                    });
+        if (user.region === null) {
+            continueMetro(chat);
+
+        } else {
+            for (let j = 0; j < metroFile.length; j++) {
+                for (let i = 0; i < user.region.length; i++) {
+                    if (user.region[i] === metroFile[j].id) {
+                        metroFile[j].metros.map(metro => {
+                            keyboard.push({
+                                text: (metro.color ? metro.color === 'green' ? '🟢' : metro.color === 'red' ? "🔴" : metro.color === 'blue' ? "🔵" : "" : "") + " " + metro.name,
+                                callback_data: "set_metro_first:" + metro.name
+                            })
+                        });
+                    }
                 }
             }
+            keyboard = keyboard.filter((v, i, a) => a.findIndex(t => (t.text === v.text && t.callback_data === v.callback_data)) === i)
+            keyboardEnd = createKeyboardOpts(keyboard, 1, [{text: "Зберегти станції 💾", callback_data: "save_metro"}])
+            console.log(keyboard)
+            bot.sendMessage(chat, "Обери станції! 🚝 (Можна декілька)", keyboardEnd)
         }
-    }).then(() => {
-        keyboard = keyboard.filter((v, i, a) => a.findIndex(t => (t.text === v.text && t.callback_data === v.callback_data)) === i)
-        keyboardEnd = createKeyboardOpts(keyboard, 1, [{text: "Зберегти станції 💾", callback_data: "save_metro"}])
-        console.log(keyboard)
-        bot.sendMessage(chat, "Обери станції! 🚝 (Можна декілька)", keyboardEnd)
 
     })
+
 
 }
 
@@ -694,7 +691,6 @@ function selectMetroKeyboard(msg, reply, chat) {
 
 }
 
-//TODO Выбор квартир как метро
 function selectRoomsKeyboard(msg, reply, chat) {
     getUserByTelegramID(msg).then(user => {
         user.rooms = user.rooms === null ? [] : user.rooms;
@@ -794,8 +790,7 @@ function sendRandomApartment(msg) {
     })
 }
 
-
-bot.onText(/pay/, function (msg) {
+function createInvoiceMsg(msg) {
     let iKeys = [
         {
             value: "На 7 днів - 199 грн",
@@ -810,54 +805,54 @@ bot.onText(/pay/, function (msg) {
             amount: "499.00"
         }
     ];
-    bot.sendMessage(chat, "Виберіть свій тариф", createKeyboardOpts(iKeys.map(key => {
+    bot.sendMessage(msg, "Виберіть свій тариф", createKeyboardOpts(iKeys.map(key => {
         return {
             text: key.value,
             callback_data: "pay:" + key.amount
         }
     }), 1));
-});
+}
+
+function continueMetro(chat) {
+    bot.sendMessage(chat, 'Все я розібрався, яка тобі потрібна квартира. В мене зараз їх 120 шт.\n' +
+        'І щодня з’являються ще по 3 свіженьких.\n' +
+        '\n' +
+        '\n' +
+        'Показати їх?', {
+        parse_mode: "Markdown",
+        reply_markup: JSON.stringify({
+            resize_keyboard: true,
+            inline_keyboard: [[{text: 'ТАК!', callback_data: 'invoice'}]]
+        })
+    })
+}
+
+function uuidv4() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
 
 bot.on('callback_query', (msg) => {
-    // console.log(msg)
     let chat = msg.hasOwnProperty('chat') ? msg.chat.id : msg.from.id;
     let from = msg.from.id;
     let msgInfo = getMainDataFromMsg(msg)
     let reply = msg.data;
     const highPriceOpts = prepareHighPriceOpts(msg);
     const lowPriceOpts = prepareLowPriceOpts(msg);
-
     switch (reply) {
         case "buy": {
             const opts = prepareRentOrBuy(msg)
-            bot.deleteMessage(chat, msg.message.message_id);
+            //bot.deleteMessage(chat, msg.message.message_id);
             bot.sendMessage(chat, 'На жаль ця функція не працює 😥 \nМи повидомимо коли буде можливість купувати квартири\n Оберіть інший варіант', opts)
         }
             break;
-        case "YES": {
+        case "invoice": {
             sendRandomApartment(msg)
-            setTimeout(()=>{
-                let iKeys = [
-                    {
-                        value: "На 7 днів - 199 грн",
-                        amount: "199.00"
-                    },
-                    {
-                        value: "На 14 днів 299 грн",
-                        amount: "299.00"
-                    },
-                    {
-                        value: "На 30 днів - 499 грн",
-                        amount: "499.00"
-                    }
-                ];
-                bot.sendMessage(chat, "Виберіть свій тариф", createKeyboardOpts(iKeys.map(key => {
-                    return {
-                        text: key.value,
-                        callback_data: "pay:" + key.amount
-                    }
-                }), 1));
-            },5000)
+            setTimeout(() => {
+                createInvoiceMsg(chat)
+            }, 5000)
         }
             break;
         case "rent": {
@@ -869,23 +864,24 @@ bot.on('callback_query', (msg) => {
                     body: user
                 })
             })
+            bot.sendMessage(chat, `Ось так швидко я можу знайти тобі квартиру.🪄\nВирішив тобі показати, щоб ти не втік)\nДавай далі уточнювати параметри.➡\n`)
+            sendRandomApartment(msg)
             setTimeout(() => {
-                bot.deleteMessage(chat, msg.message.message_id);
+                //bot.deleteMessage(chat, msg.message.message_id);
                 bot.sendMessage(chat, 'Давай визначимо твій бюджет \nВибери мінімальний рівень', lowPriceOpts)
             }, 5000)
-            sendRandomApartment(msg)
         }
             break;
         case "save_regions" : {
             setTimeout(() => {
-                bot.deleteMessage(chat, msg.message.message_id);
+                //bot.deleteMessage(chat, msg.message.message_id);
                 setMetro(reply, chat, msg)
             }, 5000)
             sendRandomApartment(msg)
         }
             break;
         case "save_metro" : {
-            bot.deleteMessage(chat, msg.message.message_id);
+            //bot.deleteMessage(chat, msg.message.message_id);
             bot.sendMessage(chat, 'Все я розібрався, яка тобі потрібна квартира. В мене зараз їх 120 шт.\n' +
                 'І щодня з’являються ще по 3 свіженьких.\n' +
                 '\n' +
@@ -894,7 +890,7 @@ bot.on('callback_query', (msg) => {
                 parse_mode: "Markdown",
                 reply_markup: JSON.stringify({
                     resize_keyboard: true,
-                    inline_keyboard: [[{text: 'ТАК!', callback_data: 'YES'}]]
+                    inline_keyboard: [[{text: 'ТАК!', callback_data: 'invoice'}]]
                 })
             })
         }
@@ -909,7 +905,7 @@ bot.on('callback_query', (msg) => {
                 })
             }).then(() => {
                 setTimeout(() => {
-                    bot.deleteMessage(chat, msg.message.message_id);
+                    //bot.deleteMessage(chat, msg.message.message_id);
                     setRegions(reply, chat, msg);
                 }, 5000)
                 sendRandomApartment(msg)
@@ -927,35 +923,28 @@ bot.on('callback_query', (msg) => {
                     })
                 }).then(() => {
                     const opts = prepareRentOrBuy(msg)
-                    bot.deleteMessage(chat, msg.message.message_id);
-                    bot.sendMessage(chat, "Що шукаєте?", opts)
+                    //bot.deleteMessage(chat, msg.message.message_id);
+                    bot.sendMessage(chat, "З чим допомогти?", opts)
                 })
-
-
             } else if (reply.includes("pay:")) {
                 let param = reply.split(":")[1];
-                let payload = chat + Date.now() + param.replace(".", "");
-                console.log(payload)
+                let payload = uuidv4() + "*" + param.replace('.', '');
                 let prices = [{
                     label: "Оплатити",
                     amount: parseInt(param.replace(".", ""))
                 }];
-                bot.sendInvoice(chat, "Оберіть тариф", "Оплата у розмірі  " + param + " гривень", payload, TRANZZO_TOKEN, "pay", "UAH", prices).then(result => {
-                    console.log(result)
-                });
-                bot.on('message', (msg) => {
-                    if (msg.successful_payment !== undefined) {
-                        //bot.sendMessage(msg.chat.id, "Вы купили vddgf подписку")
+                bot.sendInvoice(chat, "Оберіть тариф", "Оплата у розмірі  " + param + " гривень", payload, TRANZZO_TOKEN, "pay", "UAH", prices)
+                bot.on('pre_checkout_query', (ctx) => {
+                    if (payload !== ctx.invoice_payload) {
+                        bot.answerPreCheckoutQuery(ctx.id, false, 'Не вірні платіжні данні, спробуй ще раз, у тебе обов\'язково вийде');
                     } else {
-                        console.log('PIZDA')
+                        bot.answerPreCheckoutQuery(ctx.id, true).then(r => console.log(r))
                     }
                 })
-                bot.on('pre_checkout_query', (ctx) => {
-                    bot.answerPreCheckoutQuery(ctx.id, true)
+                bot.on('successful_payment',(msg) => {
+                    bot.sendMessage(chat, 'Вы купили подписку')
                 })
-                bot.on('successful_payment', async (asw) => { // ответ в случае положительной оплаты
-                    await bot.sendMessage(chat, 'Вы купили подписку')
-                })
+
             } else if (reply.includes("price_low:")) {
                 getUserByTelegramID(msg).then(user => {
                     user.priceMin = (reply.split(':'))[1]
@@ -965,7 +954,7 @@ bot.on('callback_query', (msg) => {
                         body: user
                     })
                 }).then(() => {
-                    bot.deleteMessage(chat, msg.message.message_id);
+                    //bot.deleteMessage(chat, msg.message.message_id);
                     bot.sendMessage(chat, "Обери верхню ціну", highPriceOpts)
                 })
             } else if (reply.includes("price:")) {
@@ -978,7 +967,7 @@ bot.on('callback_query', (msg) => {
                     })
                 }).then(() => {
                     setTimeout(() => {
-                        bot.deleteMessage(chat, msg.message.message_id);
+                        //bot.deleteMessage(chat, msg.message.message_id);
                         selectRooms(msg, reply, chat)
                     }, 5000)
                     sendRandomApartment(msg)
@@ -994,7 +983,7 @@ bot.on('callback_query', (msg) => {
                         body: user
                     })
                 }).then(() => {
-                    bot.deleteMessage(chat, msg.message.message_id);
+                    //bot.deleteMessage(chat, msg.message.message_id);
                     selectMaxRooms(msg, reply, chat)
                 })
             } else if (reply.includes("max_rooms:")) {
@@ -1007,15 +996,17 @@ bot.on('callback_query', (msg) => {
                     })
                 }).then(() => {
                     setTimeout(() => {
-                        bot.deleteMessage(chat, msg.message.message_id);
+                        //bot.deleteMessage(chat, msg.message.message_id);
                         setRegions(reply, chat, msg);
                     }, 5000)
                     sendRandomApartment(msg)
                 })
-            } /*else if (reply.includes("rooms")) {
+            }
+            /*else if (reply.includes("rooms")) {
                 //TODO Put to user room
                 selectRooms(msg, reply, chat)
-            } */ else if (reply.includes("apartments")) {
+            } */
+            else if (reply.includes("apartments")) {
                 //TODO Put to user apart
                 /*getUserByTelegramID(msg).then(user => {
                     /!*return api.request({
