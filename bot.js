@@ -221,6 +221,7 @@ bot.onText(/pay/, (msg) => {
 });
 
 function sendApartmentMessageForUser(user, captionString, apartmentId, apartment, viewConfig, resp) {
+    console.log("ID SENAPARTMENT:   "+ apartmentId)
     bot.sendMessage(user.idTelegram, "Навігація:", {
         parse_mode: "Markdown",
         "disable_notification": true,
@@ -228,10 +229,10 @@ function sendApartmentMessageForUser(user, captionString, apartmentId, apartment
             resize_keyboard: true,
             inline_keyboard: [[{
                 text: user.savedApartments.map(ap => ap.id).includes(apartmentId) ? "Збережено ✅" : 'Зберегти  ❤',
-                callback_data: 'like:' + apartment.id
+                callback_data: 'like:' + apartmentId
             }, {
                 text: 'Детальніше ℹ️',
-                callback_data: 'detail_info:' + apartment.id
+                callback_data: 'detail_info:' + apartment
             }], [{
                 text: viewConfig.previos === -1 ? "⏺" : '◀️ Попередня',
                 callback_data: 'aps:' + user.todayCompilation[viewConfig.previos] + ":" + resp.map(ms => ms.message_id).join("*")
@@ -251,6 +252,8 @@ function sendApartments(user, msg, idApartments) {
         filters: {id: idApartments},
         method: "GET"
     }).then(apartment => {
+        console.log("ID APARTMENT:   "+idApartments   )
+        console.log(apartment)
         let metro = [];
         if (apartment) {
             let metroArray = require('./metros.json');
@@ -310,10 +313,10 @@ function sendApartments(user, msg, idApartments) {
                             resize_keyboard: true,
                             inline_keyboard: [[{
                                 text: user.savedApartments.map(ap => ap.id).includes(idApartments) ? "Збережено ✅" : 'Зберегти  ❤',
-                                callback_data: 'like:' + apartment.id
+                                callback_data: 'like:' +idApartments
                             }, {
                                 text: 'Детальніше ℹ️',
-                                callback_data: 'detail_info:' + apartment.id
+                                callback_data: 'detail_info:' + idApartments
                             }],
                                 [{
                                     text: viewConfig.previos === -1 ? "⏺" : '◀️ Попередня',
@@ -906,8 +909,8 @@ function saveApartmentToLiked(msg, reply, chat) {
             if (reg !== reply.split(":")[1]) return reg
         }), reply.split(":")[1]];
         console.log(liked);*/
-        user.savedApartments.concat(reply.split(":")[1])
-        console.log(user.savedApartments)
+        user.savedApartments.push(reply.split(":")[1])
+        console.log(user)
         ap.request({
             "url": "user/updateById/" + user.id,
             "method": "PUT",
@@ -1117,6 +1120,7 @@ bot.on('callback_query', (msg) => {
                 })
 
             } else if (reply.includes("like")) {
+                console.log("ANSWER LIKE:    "+ reply)
                 saveApartmentToLiked(msg, reply, chat);
             } else if (reply.includes("rooms")) {
                 selectRoomsKeyboard(msg, reply, chat)
