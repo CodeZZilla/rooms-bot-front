@@ -221,23 +221,23 @@ bot.onText(/pay/, (msg) => {
 });
 
 function sendApartmentMessageForUser(user, captionString, apartmentId, apartment, viewConfig, resp) {
-    bot.sendMessage(user.telegram_id, captionString, {
+    bot.sendMessage(user.idTelegram, "Навігація:", {
         parse_mode: "Markdown",
         "disable_notification": true,
         reply_markup: JSON.stringify({
             resize_keyboard: true,
             inline_keyboard: [[{
-                text: user.liked_apartments.map(ap => ap.id).includes(apartmentId) ? "Збережено ✅" : 'Зберегти  ❤',
+                text: user.savedApartments.map(ap => ap.id).includes(apartmentId) ? "Збережено ✅" : 'Зберегти  ❤',
                 callback_data: 'like:' + apartment.id
             }, {
                 text: 'Детальніше ℹ️',
                 callback_data: 'detail_info:' + apartment.id
             }], [{
                 text: viewConfig.previos === -1 ? "⏺" : '◀️ Попередня',
-                callback_data: 'aps:' + user.messaging_history.todayCompilation[viewConfig.previos] + ":" + resp.map(ms => ms.message_id).join("*")
+                callback_data: 'aps:' + user.todayCompilation[viewConfig.previos] + ":" + resp.map(ms => ms.message_id).join("*")
             }, {
                 text: 'Наступна ▶️',
-                callback_data: 'aps:' + user.messaging_history.todayCompilation[viewConfig.next] + ":" + resp.map(ms => ms.message_id).join("*")
+                callback_data: 'aps:' + user.todayCompilation[viewConfig.next] + ":" + resp.map(ms => ms.message_id).join("*")
             }]]
         })
     })
@@ -266,7 +266,7 @@ function sendApartments(user, msg, idApartments) {
                     photos.push({
                         type: "photo",
                         media: apartment[0].images[i],
-                        // caption: captionString,
+                        caption: captionString,
                         parse_mode: "Markdown"
                     })
                 } else {
@@ -280,10 +280,17 @@ function sendApartments(user, msg, idApartments) {
             }], {"disable_notification": true})
                 .then(resp => {
                     let viewConfig = {previos: -1, next: 0}
+                    console.log("ID APARTMENT:  " + idApartments)
+                    idApartments = Number(idApartments);
+                    console.log(typeof idApartments)
+                    console.log("INDEXOF:  " + user.todayCompilation.indexOf(idApartments))
                     if (user.todayCompilation.indexOf(idApartments) !== -1) {
                         viewConfig.previos = user.todayCompilation.indexOf(idApartments) - 1 >= 0 ? user.todayCompilation.indexOf(idApartments) - 1 : -1;
                         viewConfig.next = user.todayCompilation.indexOf(idApartments) + 1 <= user.todayCompilation.length - 1 ? user.todayCompilation.indexOf(idApartments) + 1 : 0;
+                        console.log("VIEW CONFIG previos :   " + viewConfig.previos)
+                        console.log("VIEW CONFIG next :   " + viewConfig.next)
                     } else {
+                        console.log("TYT PROBLEMA")
                         viewConfig = {previos: -1, next: 0}
                     }
                     sendApartmentMessageForUser(user, captionString, idApartments, apartment, viewConfig, resp);
@@ -891,6 +898,33 @@ function clearPreviousApartment(chatId, imagesId, replyMarkupId) {
     bot.deleteMessage(chatId, replyMarkupId)
 }
 
+function saveApartmentToLiked(msg, reply, chat) {
+    getUserByTelegramID(msg).then(user => {
+        user.savedApartments = user.savedApartments === null ? [] : user.savedApartments;
+
+        /*let liked = [...user.savedApartments.map(reg => {
+            if (reg !== reply.split(":")[1]) return reg
+        }), reply.split(":")[1]];
+        console.log(liked);*/
+        user.savedApartments.concat(reply.split(":")[1])
+        console.log(user.savedApartments)
+        ap.request({
+            "url": "user/updateById/" + user.id,
+            "method": "PUT",
+            body: user
+        })
+        bot.editMessageReplyMarkup({
+            inline_keyboard: msg.message.reply_markup.inline_keyboard.map(arr => {
+                if (arr[0].callback_data.includes(reply)) {
+                    arr[0].text = "Збережено ✅";
+                }
+                return arr
+            })
+        }, {message_id: msg.message.message_id, chat_id: chat})
+    })
+}
+
+
 bot.on('callback_query', (msg) => {
     let chat = msg.hasOwnProperty('chat') ? msg.chat.id : msg.from.id;
     let from = msg.from.id;
@@ -1075,13 +1109,15 @@ bot.on('callback_query', (msg) => {
                 })*/
             } else if (reply.includes("aps")) {
                 let apartmentId = reply.split(":")[1];
-                console.log("ID NEXT APARTMENT:  "+ apartmentId)
+                console.log("ID NEXT APARTMENT:  " + apartmentId)
                 let images = reply.split(":")[2].split("*");
                 getUserByTelegramID(msg).then(user => {
-                    //clearPreviousApartment(user.idTelegram, images, msg.message.message_id)
-                    sendApartments(user,msg,  apartmentId)
+                    clearPreviousApartment(user.idTelegram, images, msg.message.message_id)
+                    sendApartments(user, msg, apartmentId)
                 })
 
+            } else if (reply.includes("like")) {
+                saveApartmentToLiked(msg, reply, chat);
             } else if (reply.includes("rooms")) {
                 selectRoomsKeyboard(msg, reply, chat)
             } else if (reply.includes("rg")) {
