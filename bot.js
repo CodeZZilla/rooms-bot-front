@@ -7,7 +7,12 @@ const bot = new TelegramBot(token_tg, {polling: true});
 const MANAGER_CHAT = -1001339183887;
 const apiTests = require('./api/Api');
 let ap = new apiTests()
-const {getMainDataFromMsg, createApartmentsMessage, createFiltersMessage} = require("./utils/TelegramUtils")
+const {
+    getMainDataFromMsg,
+    createApartmentsMessage,
+    createFiltersMessage,
+    createFreshApartmentsMessage
+} = require("./utils/TelegramUtils")
 const metroArray = require("./metros.json");
 const metroFile = require("./metro-kyiv.json");
 const cities = require("./cities.json");
@@ -118,7 +123,7 @@ bot.onText(/Свіжі квартири/, (msg) => {
         if (user.daysOfSubscription > 0) {
             user.todayCompilation = user.todayCompilation === null ? [] : user.todayCompilation;
             if (user.todayCompilation.length > 0) {
-                sendApartments(user, user.todayCompilation[0])
+                sendApartments(user, msg, user.todayCompilation[0])
             } else {
                 bot.sendMessage(msgInfo.chat, "Свежих квартир нет")
             }
@@ -215,13 +220,37 @@ bot.onText(/pay/, (msg) => {
     createInvoiceMsg(msg.chat.id);
 });
 
-function sendApartments(user, idApartments) {
+function sendApartmentMessageForUser(user, captionString, apartmentId, apartment, viewConfig, resp) {
+    bot.sendMessage(user.idTelegram, "Навігація:", {
+        parse_mode: "Markdown",
+        "disable_notification": true,
+        reply_markup: JSON.stringify({
+            resize_keyboard: true,
+            inline_keyboard: [[{
+                text: user.savedApartments.map(ap => ap.id).includes(apartmentId) ? "Збережено ✅" : 'Зберегти  ❤',
+                callback_data: 'like:' + apartment.id
+            }, {
+                text: 'Детальніше ℹ️',
+                callback_data: 'detail_info:' + apartment.id
+            }], [{
+                text: viewConfig.previos === -1 ? "⏺" : '◀️ Попередня',
+                callback_data: 'aps:' + user.todayCompilation[viewConfig.previos] + ":" + resp.map(ms => ms.message_id).join("*")
+            }, {
+                text: 'Наступна ▶️',
+                callback_data: 'aps:' + user.todayCompilation[viewConfig.next] + ":" + resp.map(ms => ms.message_id).join("*")
+            }]]
+        })
+    })
+}
+
+
+function sendApartments(user, msg, idApartments) {
+    user.savedApartments = user.savedApartments === null ? [] : user.savedApartments;
     ap.request({
         url: "apartments/find",
         filters: {id: idApartments},
         method: "GET"
     }).then(apartment => {
-        console.dir(apartment)
         let metro = [];
         if (apartment) {
             let metroArray = require('./metros.json');
@@ -230,7 +259,7 @@ function sendApartments(user, idApartments) {
                     metro = metroArray[i];
                 }
             }
-            let captionString = createApartmentsMessage(apartment[0], metro);
+            let captionString = createFreshApartmentsMessage(apartment[0], metro);
             let photos = [];
             for (let i = 0; i < apartment[0].images.slice(0, 5).length; i++) {
                 if (i === 0) {
@@ -244,28 +273,58 @@ function sendApartments(user, idApartments) {
                     photos.push({type: "photo", media: apartment[0].images[i]})
                 }
             }
+            // let viewConfig = {previos: -1, next: 0}
             bot.sendMediaGroup(user.idTelegram, (photos.length) > 0 ? photos : [{
                 type: 'photo',
-                media: "https://consaltliga.com.ua/wp-content/themes/consultix/images/no-image-found-360x250.png",
-
-            }], {
-                reply_markup: JSON.stringify({
-                    resize_keyboard: true,
-                    inline_keyboard: [[{
-                        text: user.savedApartments.map(ap => ap.id).includes(idApartments) ? "Збережено ✅" : 'Зберегти  ❤',
-                        callback_data: 'like:' + apartment.id
-                    }, {
-                        text: 'Детальніше ℹ️',
-                        callback_data: 'detail_info:' + apartment.id
-                    }], [{
-                        text: viewConfig.previos === -1 ? "⏺" : '◀️ Попередня',
-                        callback_data: 'aps:' + user.messaging_history.todayCompilation[viewConfig.previos] + ":"
-                    }, {
-                        text: 'Наступна ▶️',
-                        callback_data: 'aps:' + user.messaging_history.todayCompilation[viewConfig.next] + ":"
-                    }]]
+                media: "http://consaltliga.com.ua/wp-content/themes/consultix/images/no-image-found-360x250.png"
+            }], {"disable_notification": true})
+                .then(resp => {
+                    let viewConfig = {previos: -1, next: 0}
+                    console.log("ID APARTMENT:  " + idApartments)
+                    idApartments = Number(idApartments);
+                    console.log(typeof idApartments)
+                    console.log("INDEXOF:  " + user.todayCompilation.indexOf(idApartments))
+                    if (user.todayCompilation.indexOf(idApartments) !== -1) {
+                        viewConfig.previos = user.todayCompilation.indexOf(idApartments) - 1 >= 0 ? user.todayCompilation.indexOf(idApartments) - 1 : -1;
+                        viewConfig.next = user.todayCompilation.indexOf(idApartments) + 1 <= user.todayCompilation.length - 1 ? user.todayCompilation.indexOf(idApartments) + 1 : 0;
+                        console.log("VIEW CONFIG previos :   " + viewConfig.previos)
+                        console.log("VIEW CONFIG next :   " + viewConfig.next)
+                    } else {
+                        console.log("TYT PROBLEMA")
+                        viewConfig = {previos: -1, next: 0}
+                    }
+                    sendApartmentMessageForUser(user, captionString, idApartments, apartment, viewConfig, resp);
                 })
-            })
+                .catch(err => {
+                    let viewConfig = {previos: -1, next: 0}
+                    if (user.todayCompilation.indexOf(idApartments) !== -1) {
+                        viewConfig.previos = user.todayCompilation.indexOf(idApartments) - 1 >= 0 ? user.todayCompilation.indexOf(idApartments) - 1 : -1;
+                        viewConfig.next = user.todayCompilation.indexOf(idApartments) + 1 <= user.todayCompilation.length - 1 ? user.todayCompilation.indexOf(idApartments) + 1 : 0;
+                    } else {
+                        viewConfig = {previos: -1, next: 0}
+                    }
+                    bot.sendMessage(user.idTelegram, captionString, {
+                        parse_mode: "Markdown",
+                        "disable_notification": true,
+                        reply_markup: JSON.stringify({
+                            resize_keyboard: true,
+                            inline_keyboard: [[{
+                                text: user.savedApartments.map(ap => ap.id).includes(idApartments) ? "Збережено ✅" : 'Зберегти  ❤',
+                                callback_data: 'like:' + apartment.id
+                            }, {
+                                text: 'Детальніше ℹ️',
+                                callback_data: 'detail_info:' + apartment.id
+                            }],
+                                [{
+                                    text: viewConfig.previos === -1 ? "⏺" : '◀️ Попередня',
+                                    callback_data: 'aps:' + user.todayCompilation[viewConfig.previos] + ":"
+                                }, {
+                                    text: 'Наступна ▶️',
+                                    callback_data: 'aps:' + user.todayCompilation[viewConfig.next] + ":"
+                                }]]
+                        })
+                    })
+                })
         } else {
             bot.sendMessage(user.idTelegram, 'На жаль квартири за даними параметрами не знайдено')
         }
@@ -290,7 +349,7 @@ bot.onText(/Оновити фільтри/, (msg) => {
     const cities = require('./cities.json')
     setTimeout(() => {
         bot.sendMessage(msgInfo.chat, "Яке твоє місто?", createKeyboardOpts(cities.map(city => {
-            return {text: city.name, callback_data: "set_city_regions:" + city.id}
+            return {text: city.name, callback_data: "set_city:" + city.id}
         }), 3,))
     }, 1000)
 
@@ -838,6 +897,40 @@ function uuidv4() {
     });
 }
 
+function clearPreviousApartment(chatId, imagesId, replyMarkupId) {
+    for (let imageId of imagesId) {
+        bot.deleteMessage(chatId, imageId)
+    }
+    bot.deleteMessage(chatId, replyMarkupId)
+}
+
+function saveApartmentToLiked(msg, reply, chat) {
+    getUserByTelegramID(msg).then(user => {
+        user.savedApartments = user.savedApartments === null ? [] : user.savedApartments;
+
+        /*let liked = [...user.savedApartments.map(reg => {
+            if (reg !== reply.split(":")[1]) return reg
+        }), reply.split(":")[1]];
+        console.log(liked);*/
+        user.savedApartments.concat(reply.split(":")[1])
+        console.log(user.savedApartments)
+        ap.request({
+            "url": "user/updateById/" + user.id,
+            "method": "PUT",
+            body: user
+        })
+        bot.editMessageReplyMarkup({
+            inline_keyboard: msg.message.reply_markup.inline_keyboard.map(arr => {
+                if (arr[0].callback_data.includes(reply)) {
+                    arr[0].text = "Збережено ✅";
+                }
+                return arr
+            })
+        }, {message_id: msg.message.message_id, chat_id: chat})
+    })
+}
+
+
 bot.on('callback_query', (msg) => {
     let chat = msg.hasOwnProperty('chat') ? msg.chat.id : msg.from.id;
     let from = msg.from.id;
@@ -1030,6 +1123,17 @@ bot.on('callback_query', (msg) => {
                         body: {preferences: {city: reply.split(":")[1]}}
                     })*!/
                 })*/
+            } else if (reply.includes("aps")) {
+                let apartmentId = reply.split(":")[1];
+                console.log("ID NEXT APARTMENT:  " + apartmentId)
+                let images = reply.split(":")[2].split("*");
+                getUserByTelegramID(msg).then(user => {
+                    clearPreviousApartment(user.idTelegram, images, msg.message.message_id)
+                    sendApartments(user, msg, apartmentId)
+                })
+
+            } else if (reply.includes("like")) {
+                saveApartmentToLiked(msg, reply, chat);
             } else if (reply.includes("rooms")) {
                 selectRoomsKeyboard(msg, reply, chat)
             } else if (reply.includes("rg")) {

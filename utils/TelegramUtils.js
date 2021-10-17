@@ -17,6 +17,20 @@ function createApartmentsMessage(apartment, metro) {
     + `*Поверх*: ${apartment.floor}`
 }
 
+function createFreshApartmentsMessage(apartment, metro) {
+    return `*${apartment.category ? apartment.category : "Квартира :)"}*\n`
+        + `*Ціна*: ${apartment.price.value} ${apartment.price.currency}\n`
+        + `*Вільна*: ${apartment.isFree ? "Ні 😔" : "Так! 🥳"}\n`
+        + `*Станція метро*: ${(metro) ? (metro.name) ? ((metro.color ? metro.color === 'green' ? '🟢' : metro.color === 'red' ? "🔴" : metro.color === 'blue' ? "🔵" : "" : "") + " " + metro.name) : "Не вказано :(" : "Не вказано :("}\n`
+        + `*Адреса*: \`${apartment.location.address ? apartment.location.address : "Не вказано 😔"}\`\n`
+        + `*Район*: \`${apartment.location.subLocationName ? apartment.location.subLocationName : "Не вказано 😔"}\`\n`
+        + `*Кількість кімнат*: ${apartment.rooms ? apartment.rooms : "Не вказано :("}\n`
+        + `*Площа*: ${apartment.area.value} м²\n`
+        + `*Поверх*: ${apartment.floor}\n`
+        + `*Номер власника*: ${apartment.salesAgent.phone}`;
+
+}
+
 function createFiltersMessage(user, metro) {
 
     return "Твої попередні фільтри:\n\n" + `*Місто*: ${user.city}\n\n` +
@@ -34,5 +48,6 @@ function createFiltersMessage(user, metro) {
 module.exports = {
     getMainDataFromMsg,
     createApartmentsMessage,
-    createFiltersMessage
+    createFiltersMessage,
+    createFreshApartmentsMessage
 }
