@@ -357,7 +357,8 @@ async function registerUser(msgInfo) {
             "nickname": msgInfo.chat,
             "name": msgInfo.name,
             "idTelegram": msgInfo.chat,
-            "lastName": msgInfo.last_name
+            "lastName": msgInfo.last_name,
+            "daysOfSubscription": 2
         }
     })
 }
@@ -365,7 +366,7 @@ async function registerUser(msgInfo) {
 function sendGreetingMessage(msgInfo) {
     const cities = require('./cities.json')
     setTimeout(() => {
-        bot.sendMessage(msgInfo.chat, `Ти з нами вперше - тому з чим тобі допомогти?`)
+        bot.sendMessage(msgInfo.chat, `Ти з нами вперше - тому тобі надано 2 дні тестової підписки \n З чим тобі допомогти?`)
             .then(() => {
                 bot.sendMessage(msgInfo.chat, "Яке твоє місто?", createKeyboardOpts(cities.map(city => {
                     return {text: city.name, callback_data: "set_city_regions:" + city.id}
@@ -794,21 +795,24 @@ function createInvoiceMsg(msg) {
     let iKeys = [
         {
             value: "На 7 днів - 199 грн",
-            amount: "199.00"
+            amount: "199.00",
+            days: 7
         },
         {
             value: "На 14 днів 299 грн",
-            amount: "299.00"
+            amount: "299.00",
+            days: 14
         },
         {
             value: "На 30 днів - 499 грн",
-            amount: "499.00"
+            amount: "499.00",
+            days: 30
         }
     ];
     bot.sendMessage(msg, "Виберіть свій тариф", createKeyboardOpts(iKeys.map(key => {
         return {
             text: key.value,
-            callback_data: "pay:" + key.amount
+            callback_data: "pay:" + key.amount + ":" + key.days
         }
     }), 1));
 }
@@ -864,9 +868,9 @@ bot.on('callback_query', (msg) => {
                     body: user
                 })
             })
-            bot.sendMessage(chat, `Ось так швидко я можу знайти тобі квартиру.🪄\nВирішив тобі показати, щоб ти не втік)\nДавай далі уточнювати параметри.➡\n`)
             sendRandomApartment(msg)
             setTimeout(() => {
+                bot.sendMessage(chat, `Ось так швидко я можу знайти тобі квартиру.🪄\nВирішив тобі показати, щоб ти не втік)\nДавай далі уточнювати параметри.➡\n`)
                 //bot.deleteMessage(chat, msg.message.message_id);
                 bot.sendMessage(chat, 'Давай визначимо твій бюджет \nВибери мінімальний рівень', lowPriceOpts)
             }, 5000)
@@ -934,16 +938,26 @@ bot.on('callback_query', (msg) => {
                     amount: parseInt(param.replace(".", ""))
                 }];
                 bot.sendInvoice(chat, "Оберіть тариф", "Оплата у розмірі  " + param + " гривень", payload, TRANZZO_TOKEN, "pay", "UAH", prices)
-                bot.on('pre_checkout_query', (ctx) => {
-                    if (payload !== ctx.invoice_payload) {
+                bot.on('pre_checkout_query', async (ctx) => {
+                    /*if (payload !== ctx.invoice_payload) {
                         bot.answerPreCheckoutQuery(ctx.id, false, 'Не вірні платіжні данні, спробуй ще раз, у тебе обов\'язково вийде');
                     } else {
                         bot.answerPreCheckoutQuery(ctx.id, true).then(r => console.log(r))
-                    }
+                    }*/
+                    await bot.answerPreCheckoutQuery(ctx.id, true);
                 })
-                bot.on('successful_payment',(msg) => {
-                    bot.sendMessage(chat, 'Вы купили подписку')
+                bot.on('successful_payment', async (ans) => {
+                    getUserByTelegramID(msg).then(user => {
+                        user.daysOfSubscription = parseInt(reply.split(":")[2])
+                        return ap.request({
+                            "url": "user/updateById/" + user.id,
+                            "method": "PUT",
+                            body: user
+                        })
+                    })
+                    await bot.sendMessage(chat, 'Вы купили подписку')
                 })
+
 
             } else if (reply.includes("price_low:")) {
                 getUserByTelegramID(msg).then(user => {
