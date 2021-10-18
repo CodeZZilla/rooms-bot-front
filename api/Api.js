@@ -10,7 +10,6 @@ module.exports = class Api {
     }
 
     request(params) {
-
         const self = this;
         const param = new URLSearchParams();
         param.append('username', 'admin')
@@ -26,10 +25,10 @@ module.exports = class Api {
         }).then(res => {
             return res.json()
         }).then(json => {
-            self.authToken = json.access_token;
+            //self.authToken = json.access_token;
             let args;
             let headers = {
-                "Authorization": `Bearer ${self.authToken}`,
+                //"Authorization": `Bearer ${self.authToken}`,
                 'Content-Type': 'application/json'
             };
             if (params.method === "POST" || params.method === "PUT") {
@@ -37,7 +36,7 @@ module.exports = class Api {
                     args = {
                         method: params.method,
                         headers: {
-                            "Authorization": `Bearer ${self.authToken}`,
+                            //"Authorization": `Bearer ${self.authToken}`,
                             'Content-Type': `multipart/form-data; `,
                         },
                         body: params.body,
@@ -55,11 +54,6 @@ module.exports = class Api {
                     headers: headers,
                 };
             }
-            /*
-            args = {
-                method:'GET',
-                headers: headers,
-            }*/
             // let resultUrl = 'http://localhost:8080/api/apartments/allByParams?city=Киев&type=аренда'
             let resultUrl = self.endpoint + params.url + (params.id ? "/" + params.id : '' + ((params.filters) ? "?" + new URLSearchParams(params.filters).toString() : ''));
             console.log(resultUrl)

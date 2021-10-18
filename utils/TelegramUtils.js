@@ -44,7 +44,6 @@ function createFiltersMessage(user, metro) {
         + `\n\n*Тип пошуку*: ${user.isRooms?"Оренда":"Купівля"}`;
 }
 
-
 module.exports = {
     getMainDataFromMsg,
     createApartmentsMessage,

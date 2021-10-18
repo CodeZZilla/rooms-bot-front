@@ -13,8 +13,6 @@ const {
     createFiltersMessage,
     createFreshApartmentsMessage
 } = require("./utils/TelegramUtils")
-const metroArray = require("./metros.json");
-const metroFile = require("./metro-kyiv.json");
 const cities = require("./cities.json");
 const rooms = [
     {
@@ -36,9 +34,6 @@ const TRANZZO_TOKEN = process.env.TRANZZO_TOKEN;
 bot.onText(/\/start/, (msg) => {
     try {
         let msgInfo = getMainDataFromMsg(msg);
-        // let key = msg.text.replace("/start", '').trim();
-        // let password = passgen.create(20);
-
         getUserByTelegramID(msg).then(user => {
             if (user) {
                 processReturnedUser(msgInfo);
@@ -243,7 +238,6 @@ function sendApartmentMessageForUser(user, captionString, apartmentId, apartment
     })
 }
 
-
 function sendApartments(user, msg, idApartments) {
     user.savedApartments = user.savedApartments === null ? [] : user.savedApartments;
     ap.request({
@@ -428,7 +422,7 @@ function sendGreetingMessage(msgInfo) {
         bot.sendMessage(msgInfo.chat, `Ти з нами вперше - тому тобі надано 2 дні тестової підписки \n З чим тобі допомогти?`)
             .then(() => {
                 bot.sendMessage(msgInfo.chat, "Яке твоє місто?", createKeyboardOpts(cities.map(city => {
-                    return {text: city.name, callback_data: "set_city_regions:" + city.id}
+                    return {text: city.name, callback_data: "set_city_update:" + city.id}
                 }), 3,))
             })
     }, 1000)
@@ -504,11 +498,11 @@ function prepareRentOrBuy(msg) {
                 [
                     {
                         text: 'Хочу орендувати',
-                        callback_data: 'rent'
+                        callback_data: 'rent_update'
                     },
                     {
                         text: ' Хочу купити',
-                        callback_data: 'buy'
+                        callback_data: 'buy_update'
                     }
                 ]
             ]
@@ -891,7 +885,8 @@ function continueMetro(chat) {
 
 function uuidv4() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-        let r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+        let r = Math.random() * 16 | 0,
+            v = c === 'x' ? r : (r & 0x3 | 0x8);
         return v.toString(16);
     });
 }
@@ -929,10 +924,8 @@ function saveApartmentToLiked(msg, reply, chat) {
     })
 }
 
-
 bot.on('callback_query', (msg) => {
     let chat = msg.hasOwnProperty('chat') ? msg.chat.id : msg.from.id;
-    let from = msg.from.id;
     let msgInfo = getMainDataFromMsg(msg)
     let reply = msg.data;
     const highPriceOpts = prepareHighPriceOpts(msg);
@@ -964,6 +957,22 @@ bot.on('callback_query', (msg) => {
             setTimeout(() => {
                 bot.sendMessage(chat, `Ось так швидко я можу знайти тобі квартиру.🪄\nВирішив тобі показати, щоб ти не втік)\nДавай далі уточнювати параметри.➡\n`)
                 //bot.deleteMessage(chat, msg.message.message_id);
+                bot.sendMessage(chat, 'Давай визначимо твій бюджет \nВибери мінімальний рівень', lowPriceOpts)
+            }, 1000)
+        }
+            break;
+        case "rent_update":{
+            getUserByTelegramID(msg).then(user => {
+                user.rent = true;
+                return ap.request({
+                    "url": "user/updateById/" + user.id,
+                    "method": "PUT",
+                    body: user
+                })
+            })
+            setTimeout(() => {
+                //bot.deleteMessage(chat, msg.message.message_id);
+                console.log("UPDATE")
                 bot.sendMessage(chat, 'Давай визначимо твій бюджет \nВибери мінімальний рівень', lowPriceOpts)
             }, 1000)
         }
@@ -1030,7 +1039,6 @@ bot.on('callback_query', (msg) => {
                         }), 3,))
                     },1000)
                 }
-
             }
             else if (reply.includes("pay:")) {
                 let param = reply.split(":")[1];
@@ -1040,29 +1048,48 @@ bot.on('callback_query', (msg) => {
                     amount: parseInt(param.replace(".", ""))
                 }];
                 bot.sendInvoice(chat, "Оберіть тариф", "Оплата у розмірі  " + param + " гривень", payload, TRANZZO_TOKEN, "pay", "UAH", prices)
-                bot.on('pre_checkout_query', (ctx) => {
-                    /*if (payload !== ctx.invoice_payload) {
-                        bot.answerPreCheckoutQuery(ctx.id, false, 'Не вірні платіжні данні, спробуй ще раз, у тебе обов\'язково вийде');
-                    } else {
-                        bot.answerPreCheckoutQuery(ctx.id, true).then(r => console.log(r))
-                    }*/
-                    bot.answerPreCheckoutQuery(ctx.id, true);
-                })
+                bot.on('pre_checkout_query', ctx => bot.answerPreCheckoutQuery(ctx.id, true))
                 bot.on('successful_payment',  (ans) => {
-                    console.log(ans)
+                    if(payload === ans.successful_payment.invoice_payload){
+                        getUserByTelegramID(msg).then(user => {
+                            user.daysOfSubscription = parseInt(reply.split(":")[2])
+                            ap.request({
+                                "url": "user/updateById/" + user.id,
+                                "method": "PUT",
+                                body: user
+                            })
+                            bot.sendMessage(chat, 'Вы купили подписку')
+                        })
+
+                    }
+
+                })
+
+            }
+            else if (reply.includes("set_city_update")){
+                console.log("UPDATE_CITY")
+                if(reply.split(':')[1] === 'Киев'){
                     getUserByTelegramID(msg).then(user => {
-                        user.daysOfSubscription = parseInt(reply.split(":")[2])
-                        ap.request({
+                        user.city = reply.split(':')[1]
+                        return ap.request({
                             "url": "user/updateById/" + user.id,
                             "method": "PUT",
                             body: user
                         })
-                        bot.sendMessage(chat, 'Вы купили подписку')
+                    }).then(() => {
+                        const opts = prepareRentOrBuy(msg)
+                        //bot.deleteMessage(chat, msg.message.message_id);
+                        bot.sendMessage(chat, "З чим допомогти?", opts)
                     })
-
-                })
-
-            } else if (reply.includes("price_low:")) {
+                }else{
+                    setTimeout(()=> {
+                        bot.sendMessage(msgInfo.chat, "Вибач, але поки що у цих містах Ми не зможемо тобі допомогти😢\n Обери інше місто😇", createKeyboardOpts(cities.map(city => {
+                            return {text: city.name, callback_data: "set_city_regions:" + city.id}
+                        }), 3,))
+                    },1000)
+                }
+            }
+            else if (reply.includes("price_low:")) {
                 getUserByTelegramID(msg).then(user => {
                     user.priceMin = (reply.split(':'))[1]
                     return ap.request({
@@ -1074,7 +1101,8 @@ bot.on('callback_query', (msg) => {
                     //bot.deleteMessage(chat, msg.message.message_id);
                     bot.sendMessage(chat, "Обери верхню ціну", highPriceOpts)
                 })
-            } else if (reply.includes("price:")) {
+            }
+            else if (reply.includes("price:")) {
                 getUserByTelegramID(msg).then(user => {
                     user.priceMax = (reply.split(':'))[1]
                     return ap.request({
@@ -1090,7 +1118,8 @@ bot.on('callback_query', (msg) => {
                     sendRandomApartment(msg)
 
                 })
-            } else if (reply.includes("min_rooms:")) {
+            }
+            else if (reply.includes("min_rooms:")) {
                 getUserByTelegramID(msg).then(user => {
                     roomsMinMax = (reply.split(':'))[1]
                     user.roomsMin = (reply.split(':'))[1]
@@ -1103,7 +1132,8 @@ bot.on('callback_query', (msg) => {
                     //bot.deleteMessage(chat, msg.message.message_id);
                     selectMaxRooms(msg, reply, chat)
                 })
-            } else if (reply.includes("max_rooms:")) {
+            }
+            else if (reply.includes("max_rooms:")) {
                 getUserByTelegramID(msg).then(user => {
                     user.roomsMax = (reply.split(':'))[1]
                     return ap.request({
@@ -1119,21 +1149,9 @@ bot.on('callback_query', (msg) => {
                     sendRandomApartment(msg)
                 })
             }
-            /*else if (reply.includes("rooms")) {
-                //TODO Put to user room
-                selectRooms(msg, reply, chat)
-            } */
             else if (reply.includes("apartments")) {
-                //TODO Put to user apart
-                /*getUserByTelegramID(msg).then(user => {
-                    /!*return api.request({
-                        "url": "users",
-                        "method": "PUT",
-                        "id": user.id,
-                        body: {preferences: {city: reply.split(":")[1]}}
-                    })*!/
-                })*/
-            } else if (reply.includes("aps")) {
+            }
+            else if (reply.includes("aps")) {
                 let apartmentId = reply.split(":")[1];
                 console.log("ID NEXT APARTMENT:  " + apartmentId)
                 let images = reply.split(":")[2].split("*");
@@ -1142,14 +1160,18 @@ bot.on('callback_query', (msg) => {
                     sendApartments(user, msg, apartmentId)
                 })
 
-            } else if (reply.includes("like")) {
+            }
+            else if (reply.includes("like")) {
                 console.log("ANSWER LIKE:    "+ reply)
                 saveApartmentToLiked(msg, reply, chat);
-            } else if (reply.includes("rooms")) {
+            }
+            else if (reply.includes("rooms")) {
                 selectRoomsKeyboard(msg, reply, chat)
-            } else if (reply.includes("rg")) {
+            }
+            else if (reply.includes("rg")) {
                 selectRegionKeyboard(msg, reply, chat);
-            } else if (reply.includes("set_metro_first")) {
+            }
+            else if (reply.includes("set_metro_first")) {
                 selectMetroKeyboard(msg, reply, chat);
             }
     }
