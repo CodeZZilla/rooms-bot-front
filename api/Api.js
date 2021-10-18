@@ -11,6 +11,7 @@ module.exports = class Api {
 
     request(params) {
         //self.authToken = json.access_token;
+        let end = 'http://localhost:8080/api/';
         let args;
         let headers = {
             //"Authorization": `Bearer ${self.authToken}`,
@@ -40,7 +41,7 @@ module.exports = class Api {
             };
         }
         // let resultUrl = 'http://localhost:8080/api/apartments/allByParams?city=Киев&type=аренда'
-        let resultUrl = self.endpoint + params.url + (params.id ? "/" + params.id : '' + ((params.filters) ? "?" + new URLSearchParams(params.filters).toString() : ''));
+        let resultUrl = end + params.url + (params.id ? "/" + params.id : '' + ((params.filters) ? "?" + new URLSearchParams(params.filters).toString() : ''));
         console.log(resultUrl)
         return fetch(resultUrl, args).then(resp => {
             // console.log('*************************************************')
