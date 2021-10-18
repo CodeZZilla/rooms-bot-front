@@ -6,17 +6,17 @@
   },
   {
     "id": "Харков",
-    "name": "Харків",
-    "name_site": "у Харкові"
+    "name": "Харків\uD83C\uDFE6",
+    "name_site": "у Харкові\uD83C\uDFE6"
   },
   {
     "id": "Одесса",
-    "name": "Одеса",
-    "name_site": "в Одесі"
+    "name": "Одеса\uD83C\uDF0A",
+    "name_site": "в Одесі\uD83C\uDF0A"
   },
   {
     "id": "Львов",
-    "name": "Львів",
-    "name_site": "у Львові"
+    "name": "Львів☕",
+    "name_site": "у Львові☕"
   }
 ]

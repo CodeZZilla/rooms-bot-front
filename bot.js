@@ -44,7 +44,6 @@ bot.onText(/\/start/, (msg) => {
                 processReturnedUser(msgInfo);
             } else {
                 registerUser(msgInfo);
-
                 bot.sendMessage(msgInfo.chat, `Привіт, ${msgInfo.name} ${msgInfo.last_name}!\nЦе 🤖 компанії РУМС!\nТут ти зможеш:
                         \n▫️обрати необхідні тобі фільтри для персональних підбірок
                         \n▫️тримати зв'язок із персональним помічником
@@ -355,8 +354,6 @@ bot.onText(/Оновити фільтри/, (msg) => {
             return {text: city.name, callback_data: "set_city:" + city.id}
         }), 3,))
     }, 1000)
-
-
 })
 
 function getUserByTelegramID(msg) {
@@ -848,7 +845,6 @@ function sendRandomApartment(msg) {
             } else {
                 bot.sendMessage(user.idTelegram, 'На жаль квартири за даними параметрами не знайдено')
             }
-
         })
     })
 }
@@ -895,7 +891,7 @@ function continueMetro(chat) {
 
 function uuidv4() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        let r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
         return v.toString(16);
     });
 }
@@ -969,7 +965,7 @@ bot.on('callback_query', (msg) => {
                 bot.sendMessage(chat, `Ось так швидко я можу знайти тобі квартиру.🪄\nВирішив тобі показати, щоб ти не втік)\nДавай далі уточнювати параметри.➡\n`)
                 //bot.deleteMessage(chat, msg.message.message_id);
                 bot.sendMessage(chat, 'Давай визначимо твій бюджет \nВибери мінімальний рівень', lowPriceOpts)
-            }, 5000)
+            }, 1000)
         }
             break;
         case "save_regions" : {
@@ -1014,19 +1010,29 @@ bot.on('callback_query', (msg) => {
             break;
         default:
             if (reply.includes("set_city")) {
-                getUserByTelegramID(msg).then(user => {
-                    user.city = (reply.split(':'))[1]
-                    return ap.request({
-                        "url": "user/updateById/" + user.id,
-                        "method": "PUT",
-                        body: user
+                if(reply.split(':')[1] === 'Киев'){
+                    getUserByTelegramID(msg).then(user => {
+                        user.city = reply.split(':')[1]
+                        return ap.request({
+                            "url": "user/updateById/" + user.id,
+                            "method": "PUT",
+                            body: user
+                        })
+                    }).then(() => {
+                        const opts = prepareRentOrBuy(msg)
+                        //bot.deleteMessage(chat, msg.message.message_id);
+                        bot.sendMessage(chat, "З чим допомогти?", opts)
                     })
-                }).then(() => {
-                    const opts = prepareRentOrBuy(msg)
-                    //bot.deleteMessage(chat, msg.message.message_id);
-                    bot.sendMessage(chat, "З чим допомогти?", opts)
-                })
-            } else if (reply.includes("pay:")) {
+                }else{
+                    setTimeout(()=> {
+                        bot.sendMessage(msgInfo.chat, "Вибач, але поки що у цих містах Ми не зможемо тобі допомогти😢\n Обери інше місто😇", createKeyboardOpts(cities.map(city => {
+                            return {text: city.name, callback_data: "set_city_regions:" + city.id}
+                        }), 3,))
+                    },1000)
+                }
+
+            }
+            else if (reply.includes("pay:")) {
                 let param = reply.split(":")[1];
                 let payload = uuidv4() + "*" + param.replace('.', '');
                 let prices = [{
@@ -1034,26 +1040,27 @@ bot.on('callback_query', (msg) => {
                     amount: parseInt(param.replace(".", ""))
                 }];
                 bot.sendInvoice(chat, "Оберіть тариф", "Оплата у розмірі  " + param + " гривень", payload, TRANZZO_TOKEN, "pay", "UAH", prices)
-                bot.on('pre_checkout_query', async (ctx) => {
+                bot.on('pre_checkout_query', (ctx) => {
                     /*if (payload !== ctx.invoice_payload) {
                         bot.answerPreCheckoutQuery(ctx.id, false, 'Не вірні платіжні данні, спробуй ще раз, у тебе обов\'язково вийде');
                     } else {
                         bot.answerPreCheckoutQuery(ctx.id, true).then(r => console.log(r))
                     }*/
-                    await bot.answerPreCheckoutQuery(ctx.id, true);
+                    bot.answerPreCheckoutQuery(ctx.id, true);
                 })
-                bot.on('successful_payment', async (ans) => {
+                bot.on('successful_payment',  (ans) => {
+                    console.log(ans)
                     getUserByTelegramID(msg).then(user => {
                         user.daysOfSubscription = parseInt(reply.split(":")[2])
-                        return ap.request({
+                        ap.request({
                             "url": "user/updateById/" + user.id,
                             "method": "PUT",
                             body: user
                         })
+                        bot.sendMessage(chat, 'Вы купили подписку')
                     })
-                    await bot.sendMessage(chat, 'Вы купили подписку')
-                })
 
+                })
 
             } else if (reply.includes("price_low:")) {
                 getUserByTelegramID(msg).then(user => {
