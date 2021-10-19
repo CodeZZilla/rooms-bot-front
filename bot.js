@@ -653,8 +653,17 @@ function setMetro(reply, chat, msg) {
 }
 
 function selectRegionKeyboard(msg, reply, chat) {
+
+
+    let userClickData = reply.split(":")[1]
+    let regions = []
+    msg.message.reply_markup.inline_keyboard.map(arr => {
+        if(arr[0].text.startsWith("✅| ")){
+            regions.push(arr[0].text.split(" ")[1])
+        }
+    })
+
     getUserByTelegramID(msg).then(user => {
-        let userClickData = reply.split(":")[1]
         user.region = user.region === null ? [] : user.region;
         if (!user.region.map(reg => reg).includes(userClickData)) {
             user.region.push(userClickData);
