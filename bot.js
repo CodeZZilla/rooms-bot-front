@@ -14,6 +14,7 @@ const {
     createFreshApartmentsMessage
 } = require("./utils/TelegramUtils")
 const cities = require("./cities.json");
+const {log} = require("nodemon/lib/utils");
 const rooms = [
     {
         "name": "1"
@@ -498,6 +499,29 @@ function prepareRentOrBuy(msg) {
                 [
                     {
                         text: 'Хочу орендувати',
+                        callback_data: 'rent'
+                    },
+                    {
+                        text: ' Хочу купити',
+                        callback_data: 'buy'
+                    }
+                ]
+            ]
+        })
+    };
+    opts.reply_to_message_id = msg.message_id
+    return opts;
+}
+
+function prepareRentOrBuyUpdate(msg) {
+    const opts = {
+        parse_mode: "Markdown",
+        reply_markup: JSON.stringify({
+            resize_keyboard: true,
+            inline_keyboard: [
+                [
+                    {
+                        text: 'Хочу орендувати',
                         callback_data: 'rent_update'
                     },
                     {
@@ -955,35 +979,26 @@ bot.on('callback_query', (msg) => {
             break;
         case "rent": {
             getUserByTelegramID(msg).then(user => {
-                user.rent = true;
+                console.log("SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS")
+
+                user.type = "аренда";
+                console.log(user)
                 return ap.request({
                     "url": "user/updateById/" + user.id,
                     "method": "PUT",
                     body: user
                 })
             })
-            sendRandomApartment(msg)
-            setTimeout(() => {
-                bot.sendMessage(chat, `Ось так швидко я можу знайти тобі квартиру.🪄\nВирішив тобі показати, щоб ти не втік)\nДавай далі уточнювати параметри.➡\n`)
-                //bot.deleteMessage(chat, msg.message.message_id);
-                bot.sendMessage(chat, 'Давай визначимо твій бюджет \nВибери мінімальний рівень', lowPriceOpts)
-            }, 1000)
-        }
-            break;
-        case "rent_update":{
-            getUserByTelegramID(msg).then(user => {
-                user.rent = true;
-                return ap.request({
-                    "url": "user/updateById/" + user.id,
-                    "method": "PUT",
-                    body: user
-                })
-            })
-            setTimeout(() => {
-                //bot.deleteMessage(chat, msg.message.message_id);
-                console.log("UPDATE")
-                bot.sendMessage(chat, 'Давай визначимо твій бюджет \nВибери мінімальний рівень', lowPriceOpts)
-            }, 1000)
+            if(!reply.includes('update')){
+                console.log("QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ")
+                sendRandomApartment(msg)
+                setTimeout(() => {
+                    bot.sendMessage(chat, `Ось так швидко я можу знайти тобі квартиру.🪄\nВирішив тобі показати, щоб ти не втік)\nДавай далі уточнювати параметри.➡\n`)
+                    //bot.deleteMessage(chat, msg.message.message_id);
+                    bot.sendMessage(chat, 'Давай визначимо твій бюджет \nВибери мінімальний рівень', lowPriceOpts)
+                }, 1000)
+            }
+
         }
             break;
         case "save_regions" : {
@@ -1074,29 +1089,6 @@ bot.on('callback_query', (msg) => {
 
                 })
 
-            }
-            else if (reply.includes("set_city_update")){
-                console.log("UPDATE_CITY")
-                if(reply.split(':')[1] === 'Киев'){
-                    getUserByTelegramID(msg).then(user => {
-                        user.city = reply.split(':')[1]
-                        return ap.request({
-                            "url": "user/updateById/" + user.id,
-                            "method": "PUT",
-                            body: user
-                        })
-                    }).then(() => {
-                        const opts = prepareRentOrBuy(msg)
-                        //bot.deleteMessage(chat, msg.message.message_id);
-                        bot.sendMessage(chat, "З чим допомогти?", opts)
-                    })
-                }else{
-                    setTimeout(()=> {
-                        bot.sendMessage(msgInfo.chat, "Вибач, але поки що у цих містах Ми не зможемо тобі допомогти😢\n Обери інше місто😇", createKeyboardOpts(cities.map(city => {
-                            return {text: city.name, callback_data: "set_city_regions:" + city.id}
-                        }), 3,))
-                    },1000)
-                }
             }
             else if (reply.includes("price_low:")) {
                 getUserByTelegramID(msg).then(user => {

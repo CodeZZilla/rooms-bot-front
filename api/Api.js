@@ -11,7 +11,7 @@ module.exports = class Api {
 
     request(params) {
         //self.authToken = json.access_token;
-        let end = 'http://localhost:8080/api/';
+        let end = 'http://95.217.184.62:8080/api/';
         let args;
         let headers = {
             //"Authorization": `Bearer ${self.authToken}`,
@@ -44,8 +44,8 @@ module.exports = class Api {
         let resultUrl = end + params.url + (params.id ? "/" + params.id : '' + ((params.filters) ? "?" + new URLSearchParams(params.filters).toString() : ''));
         console.log(resultUrl)
         return fetch(resultUrl, args).then(resp => {
-            // console.log('*************************************************')
-            // console.log(resp)
+            console.log('*************************************************')
+            console.log(resp)
             if (resp.status === 404) {
                 return false
             } else {
