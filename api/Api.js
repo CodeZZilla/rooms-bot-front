@@ -11,7 +11,7 @@ module.exports = class Api {
 
     request(params) {
         //self.authToken = json.access_token;
-        let end = 'http://95.217.184.62:8080/api/';
+        let end = 'http://localhost:8080/api/';
         let args;
         let headers = {
             //"Authorization": `Bearer ${self.authToken}`,
