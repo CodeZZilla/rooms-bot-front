@@ -17,6 +17,7 @@
   "dependencies": {
     "mongoose": "^6.0.6",
     "node-fetch": "^2.6.1",
+    "node-schedule": "^2.0.0",
     "nodemon": "^2.0.13",
     "request": "^2.88.2"
   }
